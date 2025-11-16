@@ -6,9 +6,13 @@ if (isLoggedIn()) {
     logActivity($_SESSION['user_id'], 'logout', 'User logout dari sistem');
 }
 
+session_unset();
 session_destroy();
 
-// arah ke login di folder yang sama (auth)
-header("Location: login.php");
+// arahkan ke login menggunakan path absolut berdasarkan lokasi script
+$script = $_SERVER['SCRIPT_NAME']; // misal: 
+$base = dirname($script);           // -> /sistem-inventaris-sekolah-main/auth
+$login_url = $base . '/login.php';  // -> /sistem-inventaris-sekolah-main/auth/login.php
+
+header("Location: $login_url");
 exit;
-?>
