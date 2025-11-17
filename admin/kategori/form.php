@@ -1,74 +1,283 @@
 <?php
-// sesuaikan path koneksi dan header
-include '../../config/koneksi.php';
-include '../layout/header.php';
 
-// pastikan koneksi aktif
-if (!isset($conn)) {
-    die("Koneksi gagal: variabel \$conn tidak ditemukan.");
+/**
+ * Form kategori - Admin Panel
+ * Sistem Inventaris Sekolah
+ */
+
+// Include functions
+require_once '../../config/functions.php';
+
+// Fungsi validateInput sudah ada di config/functions.php
+
+$page_title = ($action == 'edit' ? 'Edit Kategori' : 'Tambah Kategori Baru');
+require_once '../includes/header.php';
+
+$action = $_GET['action'] ?? 'add';
+$kategori_id = $_GET['id'] ?? null;
+$kategori = null;
+$error = '';
+$success = '';
+
+// Jika edit, ambil data kategori
+if ($action == 'edit' && $kategori_id) {
+    try {
+        $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $stmt = $pdo->prepare("SELECT * FROM kategori WHERE id = ?");
+        $stmt->execute([$kategori_id]);
+        $kategori = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$kategori) {
+            $error = 'kategori tidak ditemukan!';
+            echo "<script>alert('kategori tidak ditemukan!'); window.location.href='index.php';</script>";
+            exit();
+        }
+    } catch (Exception $e) {
+        $error = 'Terjadi kesalahan sistem!';
+    }
 }
 
-// ambil kata pencarian
-$cari = isset($_GET['cari']) ? trim($_GET['cari']) : '';
+// Proses form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $nama_kategori = validateInput($_POST['nama_kategori']);
+    $deskripsi = validateInput($_POST['deskripsi']);
 
-?>
+    // Validasi
+    if (empty($nama_kategori)) {
+        $error = 'Nama kategori harus diisi!';
+    } else {
+        try {
+            $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-<div class="container mt-4">
-    <h2>Data Kategori Barang</h2>
-
-    <form method="GET" action="" class="form-inline mb-3">
-        <input type="text" name="cari" class="form-control mr-2" placeholder="Cari kategori..." 
-               value="<?php echo htmlspecialchars($cari); ?>">
-        <button type="submit" class="btn btn-primary">Cari</button>
-        <a href="index.php" class="btn btn-secondary ml-2">Reset</a>
-    </form>
-
-    <table class="table table-bordered table-striped">
-        <thead class="thead-dark">
-            <tr>
-                <th>No</th>
-                <th>Nama Kategori</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php
-            $no = 1;
-
-            // perbaiki query pencarian
-            if ($cari != '') {
-                $safe = mysqli_real_escape_string($conn, $cari);
-                $query = "SELECT * FROM kategori WHERE nama_kategori LIKE '%$safe%' ORDER BY nama_kategori ASC";
-            } else {
-                $query = "SELECT * FROM kategori ORDER BY nama_kategori ASC";
-            }
-
-            $result = mysqli_query($conn, $query);
-
-            if (!$result) {
-                echo "<tr><td colspan='3'>Query Error: " . mysqli_error($conn) . "</td></tr>";
-            } else {
-                if (mysqli_num_rows($result) > 0) {
-                    while ($data = mysqli_fetch_assoc($result)) {
-                        echo "<tr>
-                                <td>{$no}</td>
-                                <td>{$data['nama_kategori']}</td>
-                                <td>
-                                    <a href='edit.php?id={$data['id_kategori']}' class='btn btn-warning btn-sm'>Edit</a>
-                                    <a href='hapus.php?id={$data['id_kategori']}' 
-                                       onclick='return confirm(\"Yakin mau hapus?\");' 
-                                       class='btn btn-danger btn-sm'>Hapus</a>
-                                </td>
-                              </tr>";
-                        $no++;
-                    }
+            if ($action == 'add') {
+                // Cek nama kategori unik
+                $stmt = $pdo->prepare("SELECT id FROM kategori WHERE nama_kategori = ?");
+                $stmt->execute([$nama_kategori]);
+                if ($stmt->fetch()) {
+                    $error = 'Nama kategori sudah ada!';
                 } else {
-                    echo "<tr><td colspan='3' class='text-center text-muted'>Data tidak ditemukan.</td></tr>";
+                    $stmt = $pdo->prepare("
+                        INSERT INTO kategori (nama_kategori, deskripsi) 
+                        VALUES (?, ?)
+                    ");
+                    $stmt->execute([$nama_kategori, $deskripsi]);
+
+                    $success = 'kategori berhasil ditambahkan!';
+                    echo "<script>alert('kategori berhasil ditambahkan!'); window.location.href='index.php';</script>";
+                    exit();
+                }
+            } else {
+                // Update kategori
+                // Cek nama kategori unik (kecuali untuk kategori yang sedang diedit)
+                $stmt = $pdo->prepare("SELECT id FROM kategori WHERE nama_kategori = ? AND id != ?");
+                $stmt->execute([$nama_kategori, $kategori_id]);
+                if ($stmt->fetch()) {
+                    $error = 'Nama kategori sudah ada!';
+                } else {
+                    $stmt = $pdo->prepare("
+                        UPDATE kategori SET 
+                            nama_kategori = ?, deskripsi = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$nama_kategori, $deskripsi, $kategori_id]);
+
+                    $success = 'kategori berhasil diupdate!';
+                    echo "<script>alert('kategori berhasil diupdate!'); window.location.href='index.php';</script>";
+                    exit();
                 }
             }
-            ?>
-        </tbody>
-    </table>
+        } catch (Exception $e) {
+            $error = 'Terjadi kesalahan sistem!';
+        }
+    }
+}
+?>
+
+<!-- Header Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="mb-2">
+                            <i class="fas fa-<?= $action == 'edit' ? 'edit' : 'plus' ?> me-2"></i>
+                            <?= $action == 'edit' ? 'Edit kategori' : 'Tambah Kategori Baru' ?>
+                        </h2>
+                        <p class="text-muted mb-0">
+                            <?= $action == 'edit' ? 'Update informasi kategori barang' : 'Tambahkan kategori baru untuk barang inventaris' ?>
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <a href="index.php" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Kembali
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<?php include '../layout/footer.php'; ?>
+<!-- Form Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-map-marker-alt me-2"></i>
+                    Form <?= $action == 'edit' ? 'Edit' : 'Tambah' ?> kategori
+                </h5>
+            </div>
+            <div class="card-body">
+                <?php if (!empty($error)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <?= $error ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($success)): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <?= $success ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+                <form method="POST" action="" id="kategoriForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nama_kategori" class="form-label">
+                                    <i class="fas fa-map-marker-alt me-1"></i>Nama kategori <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="nama_kategori" name="nama_kategori"
+                                    placeholder="Contoh: ATK, Elektronik, Furniture"
+                                    value="<?= htmlspecialchars($kategori['nama_kategori'] ?? '') ?>" required>
+                                <div class="form-text">
+                                    Masukkan nama kategori yang jelas dan mudah diidentifikasi
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="deskripsi" class="form-label">
+                                    <i class="fas fa-info-circle me-1"></i>Deskripsi
+                                </label>
+                                <textarea class="form-control" id="deskripsi" name="deskripsi" rows="3"
+                                    placeholder="Deskripsi kategori (opsional)"><?= htmlspecialchars($kategori['deskripsi'] ?? '') ?></textarea>
+                                <div class="form-text">
+                                    Tambahkan deskripsi untuk memberikan informasi lebih detail tentang kategori
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-info alert-sm mt-3" id="autoSaveIndicator" style="display: none;">
+                                <i class="fas fa-save me-1"></i>Auto-save aktif
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Action Buttons -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a href="index.php" class="btn btn-secondary">
+                                    <i class="fas fa-times me-2"></i>Batal
+                                </a>
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
+                                    <i class="fas fa-save me-2"></i>
+                                    <?= $action == 'edit' ? 'Update kategori' : 'Simpan kategori' ?>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .alert-sm {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+</style>
+
+<script>
+    // Auto-save functionality
+    let autoSaveTimer;
+    const form = document.getElementById('kategoriForm');
+    const autoSaveIndicator = document.getElementById('autoSaveIndicator');
+
+    form.addEventListener('input', function() {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => {
+            saveFormData();
+            showAutoSaveIndicator();
+        }, 2000);
+    });
+
+    function saveFormData() {
+        const formData = new FormData(form);
+        localStorage.setItem('kategoriFormData', JSON.stringify(Object.fromEntries(formData)));
+    }
+
+    function showAutoSaveIndicator() {
+        autoSaveIndicator.style.display = 'block';
+        setTimeout(() => {
+            autoSaveIndicator.style.display = 'none';
+        }, 2000);
+    }
+
+    // Restore form data on page load
+    window.addEventListener('load', function() {
+        const savedData = localStorage.getItem('kategoriFormData');
+        if (savedData && !<?= $action == 'edit' ? 'true' : 'false' ?>) {
+            const data = JSON.parse(savedData);
+            Object.keys(data).forEach(key => {
+                const element = form.elements[key];
+                if (element) {
+                    element.value = data[key];
+                }
+            });
+        }
+    });
+
+    // Clear saved data on successful submit
+    form.addEventListener('submit', function() {
+        localStorage.removeItem('kategoriFormData');
+    });
+
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const namakategori = document.getElementById('nama_kategori').value.trim();
+
+        if (namakategori.length < 3) {
+            e.preventDefault();
+            alert('Nama kategori minimal 3 karakter!');
+            return false;
+        }
+    });
+
+    // Loading state
+    const submitBtn = document.getElementById('submitBtn');
+    form.addEventListener('submit', function() {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Menyimpan...';
+        submitBtn.disabled = true;
+    });
+</script>
+
+<?php require_once '../includes/footer.php'; ?>
