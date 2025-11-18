@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Data Barang - Admin Panel
  * Sistem Inventaris Sekolah
@@ -12,20 +13,18 @@ if ($action == 'get_detail' && isset($_GET['id'])) {
     try {
         $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+
         $stmt = $pdo->prepare("
             SELECT 
                 b.*,
-                k.nama_kategori,
-                l.nama_lokasi
+                k.nama_kategori
             FROM barang b
             LEFT JOIN kategori k ON b.kategori_id = k.id
-            LEFT JOIN lokasi l ON b.lokasi_id = l.id
             WHERE b.id = ?
         ");
         $stmt->execute([$barang_id]);
         $barang = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($barang) {
             header('Content-Type: application/json');
             echo json_encode($barang);
@@ -33,7 +32,7 @@ if ($action == 'get_detail' && isset($_GET['id'])) {
             http_response_code(404);
             echo json_encode(['error' => 'Barang tidak ditemukan']);
         }
-    } catch(Exception $e) {
+    } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['error' => 'Terjadi kesalahan sistem: ' . $e->getMessage()]);
     }
@@ -50,53 +49,55 @@ require_once '../includes/header.php';
         .table-responsive {
             font-size: 0.8rem;
         }
-        
-        .table td, .table th {
+
+        .table td,
+        .table th {
             padding: 0.5rem 0.25rem;
         }
-        
+
         .btn-group .btn {
             padding: 0.2rem 0.4rem;
             font-size: 0.7rem;
         }
-        
+
         .badge {
             font-size: 0.7rem;
             padding: 0.25rem 0.5rem;
         }
-        
+
         .fw-semibold {
             font-size: 0.9rem;
         }
-        
+
         .text-muted {
             font-size: 0.75rem;
         }
     }
-    
+
     @media (max-width: 576px) {
         .table-responsive {
             font-size: 0.75rem;
         }
-        
-        .table td, .table th {
+
+        .table td,
+        .table th {
             padding: 0.4rem 0.2rem;
         }
-        
+
         .btn-group .btn {
             padding: 0.15rem 0.3rem;
             font-size: 0.65rem;
         }
-        
+
         .badge {
             font-size: 0.65rem;
             padding: 0.2rem 0.4rem;
         }
-        
+
         .fw-semibold {
             font-size: 0.85rem;
         }
-        
+
         .text-muted {
             font-size: 0.7rem;
         }
@@ -117,22 +118,22 @@ if ($action == 'delete' && isset($_GET['id'])) {
     try {
         $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+
         // Ambil info barang untuk log
         $stmt = $pdo->prepare("SELECT nama_barang, foto FROM barang WHERE id = ?");
         $stmt->execute([$barang_id]);
         $barang = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($barang) {
             // Hapus foto jika ada
             if ($barang['foto'] && file_exists('../../uploads/' . $barang['foto'])) {
                 unlink('../../uploads/' . $barang['foto']);
             }
-            
+
             // Hapus barang
             $stmt = $pdo->prepare("DELETE FROM barang WHERE id = ?");
             $stmt->execute([$barang_id]);
-            
+
             $success = 'Barang berhasil dihapus!';
             echo "<script>alert('Barang berhasil dihapus!'); window.location.href='index.php';</script>";
             exit();
@@ -141,17 +142,16 @@ if ($action == 'delete' && isset($_GET['id'])) {
             echo "<script>alert('Barang tidak ditemukan!'); window.location.href='index.php';</script>";
             exit();
         }
-    } catch(Exception $e) {
+    } catch (Exception $e) {
         $error = 'Gagal menghapus barang!';
         echo "<script>alert('Gagal menghapus barang!'); window.location.href='index.php';</script>";
-    exit();
+        exit();
     }
 }
 
 // Ambil data barang dengan pagination dan search
 $search = isset($_GET['search']) ? validateInput($_GET['search']) : '';
 $kategori_filter = isset($_GET['kategori']) ? (int)$_GET['kategori'] : '';
-$lokasi_filter = isset($_GET['lokasi']) ? (int)$_GET['lokasi'] : '';
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
@@ -159,53 +159,44 @@ $offset = ($page - 1) * $limit;
 try {
     $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
+
     // Query untuk data barang
     $where_conditions = [];
     $params = [];
-    
+
     if (!empty($search)) {
-        $where_conditions[] = "(b.nama_barang LIKE ? OR b.kode_barang LIKE ? OR b.deskripsi LIKE ?)";
+        $where_conditions[] = "(b.nama_barang LIKE ? OR b.deskripsi LIKE ?)";
         $search_param = "%$search%";
         $params[] = $search_param;
         $params[] = $search_param;
-        $params[] = $search_param;
     }
-    
+
     if (!empty($kategori_filter)) {
         $where_conditions[] = "b.kategori_id = ?";
         $params[] = $kategori_filter;
     }
-    
-    if (!empty($lokasi_filter)) {
-        $where_conditions[] = "b.lokasi_id = ?";
-        $params[] = $lokasi_filter;
-    }
-    
+
     $where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
-    
+
     // Query untuk total data
     $count_query = "
         SELECT COUNT(*) as total 
         FROM barang b 
-        LEFT JOIN kategori k ON b.kategori_id = k.id 
-        LEFT JOIN lokasi l ON b.lokasi_id = l.id 
+        LEFT JOIN kategori k ON b.kategori_id = k.id
         $where_clause
     ";
     $stmt = $pdo->prepare($count_query);
     $stmt->execute($params);
     $total_records = $stmt->fetch()['total'];
     $total_pages = ceil($total_records / $limit);
-    
+
     // Query untuk data barang
     $query = "
         SELECT 
             b.*,
-            k.nama_kategori,
-            l.nama_lokasi
+            k.nama_kategori
         FROM barang b
         LEFT JOIN kategori k ON b.kategori_id = k.id
-        LEFT JOIN lokasi l ON b.lokasi_id = l.id
         $where_clause
         ORDER BY b.created_at DESC
         LIMIT $limit OFFSET $offset
@@ -213,16 +204,13 @@ try {
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $barang_list = $stmt->fetchAll();
-    
+
     // Ambil data untuk filter
     $kategori_list = $pdo->query("SELECT * FROM kategori ORDER BY nama_kategori")->fetchAll();
-    $lokasi_list = $pdo->query("SELECT * FROM lokasi ORDER BY nama_lokasi")->fetchAll();
-    
-} catch(Exception $e) {
+} catch (Exception $e) {
     $barang_list = [];
     $total_pages = 0;
     $kategori_list = [];
-    $lokasi_list = [];
 }
 
 // Flash message
@@ -272,8 +260,8 @@ $flash = getFlashMessage();
                 <form method="GET" action="" class="row g-3">
                     <div class="col-lg-4 col-md-6 col-12">
                         <label for="search" class="form-label">Cari Barang</label>
-                        <input type="text" class="form-control" id="search" name="search" 
-                               value="<?= htmlspecialchars($search) ?>" placeholder="Nama, kode, atau deskripsi...">
+                        <input type="text" class="form-control" id="search" name="search"
+                            value="<?= htmlspecialchars($search) ?>" placeholder="Nama atau deskripsi...">
                     </div>
                     <div class="col-lg-3 col-md-6 col-12">
                         <label for="kategori" class="form-label">Kategori</label>
@@ -282,17 +270,6 @@ $flash = getFlashMessage();
                             <?php foreach ($kategori_list as $kat): ?>
                                 <option value="<?= $kat['id'] ?>" <?= $kategori_filter == $kat['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($kat['nama_kategori']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-lg-3 col-md-6 col-12">
-                        <label for="lokasi" class="form-label">Lokasi</label>
-                        <select class="form-select" id="lokasi" name="lokasi">
-                            <option value="">Semua Lokasi</option>
-                            <?php foreach ($lokasi_list as $lok): ?>
-                                <option value="<?= $lok['id'] ?>" <?= $lokasi_filter == $lok['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($lok['nama_lokasi']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -347,36 +324,31 @@ $flash = getFlashMessage();
                     </div>
                 <?php else: ?>
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover text-center">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Kode</th>
+                                    <th style="width:60px">No</th>
                                     <th>Nama Barang</th>
                                     <th class="d-none d-md-table-cell">Kategori</th>
-                                    <th class="d-none d-lg-table-cell">Lokasi</th>
-                                    <th>Stok</th>
-                                    <th class="d-none d-md-table-cell">Kondisi</th>
-                                    <th class="d-none d-lg-table-cell">Status</th>
                                     <th>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
+                                <?php $no = ($offset ?? 0) + 1; ?>
                                 <?php foreach ($barang_list as $barang): ?>
                                     <tr>
+                                        <td><?php echo $no++; ?></td>
                                         <td>
-                                            <span class="badge bg-secondary"><?= htmlspecialchars($barang['kode_barang']) ?></span>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
+                                            <div class="d-flex align-items-center justify-content-center">
                                                 <?php if ($barang['foto']): ?>
                                                     <div class="me-2">
-                                                        <img src="../../uploads/<?= htmlspecialchars($barang['foto']) ?>" 
-                                                             alt="<?= htmlspecialchars($barang['nama_barang']) ?>" 
-                                                             class="rounded" style="width: 40px; height: 40px; object-fit: cover;">
+                                                        <img src="../../uploads/<?= htmlspecialchars($barang['foto']) ?>"
+                                                            alt="<?= htmlspecialchars($barang['nama_barang']) ?>"
+                                                            class="rounded" style="width: 40px; height: 40px; object-fit: cover;">
                                                     </div>
                                                 <?php else: ?>
-                                                    <div class="me-2 bg-light rounded d-flex align-items-center justify-content-center" 
-                                                         style="width: 40px; height: 40px;">
+                                                    <div class="me-2 bg-light rounded d-flex align-items-center justify-content-center"
+                                                        style="width: 40px; height: 40px;">
                                                         <i class="fas fa-box text-muted"></i>
                                                     </div>
                                                 <?php endif; ?>
@@ -392,66 +364,19 @@ $flash = getFlashMessage();
                                         <td class="d-none d-md-table-cell">
                                             <span class="badge bg-info"><?= htmlspecialchars($barang['nama_kategori']) ?></span>
                                         </td>
-                                        <td class="d-none d-lg-table-cell">
-                                            <span class="badge bg-warning"><?= htmlspecialchars($barang['nama_lokasi']) ?></span>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <span class="fw-semibold me-2"><?= $barang['jumlah_tersedia'] ?></span>
-                                                <small class="text-muted d-none d-md-inline">/ <?= $barang['jumlah_total'] ?></small>
-                                            </div>
-                                        </td>
-                                        <td class="d-none d-md-table-cell">
-                                            <?php
-                                            $kondisi_class = '';
-                                            $kondisi_icon = '';
-                                            switch($barang['kondisi']) {
-                                                case 'baik':
-                                                    $kondisi_class = 'bg-success';
-                                                    $kondisi_icon = 'fas fa-check-circle';
-                                                    break;
-                                                case 'rusak_ringan':
-                                                    $kondisi_class = 'bg-warning';
-                                                    $kondisi_icon = 'fas fa-exclamation-triangle';
-                                                    break;
-                                                case 'rusak_berat':
-                                                    $kondisi_class = 'bg-danger';
-                                                    $kondisi_icon = 'fas fa-times-circle';
-                                                    break;
-                                                default:
-                                                    $kondisi_class = 'bg-secondary';
-                                                    $kondisi_icon = 'fas fa-question-circle';
-                                            }
-                                            ?>
-                                            <span class="badge <?= $kondisi_class ?>">
-                                                <i class="<?= $kondisi_icon ?> me-1"></i>
-                                                <span class="d-none d-lg-inline"><?= ucfirst(str_replace('_', ' ', $barang['kondisi'])) ?></span>
-                                            </span>
-                                        </td>
-                                        <td class="d-none d-lg-table-cell">
-                                            <?php if ($barang['jumlah_tersedia'] > 0): ?>
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-check me-1"></i>Tersedia
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="badge bg-danger">
-                                                    <i class="fas fa-times me-1"></i>Habis
-                                                </span>
-                                            <?php endif; ?>
-                                        </td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <button type="button" onclick="showDetail(<?= $barang['id'] ?>)" 
-                                                        class="btn btn-sm btn-outline-primary" title="Lihat Detail">
+                                                <button type="button" onclick="showDetail(<?= $barang['id'] ?>)"
+                                                    class="btn btn-sm btn-outline-primary" title="Lihat Detail">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <a href="?action=edit&id=<?= $barang['id'] ?>" 
-                                                   class="btn btn-sm btn-outline-warning" title="Edit">
+                                                <a href="?action=edit&id=<?= $barang['id'] ?>"
+                                                    class="btn btn-sm btn-outline-warning" title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
-                                                <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                        onclick="showDeleteModal(<?= $barang['id'] ?>, '<?= htmlspecialchars($barang['nama_barang']) ?>', '<?= htmlspecialchars($barang['kode_barang']) ?>')" 
-                                                        title="Hapus">
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    onclick="showDeleteModal(<?= $barang['id'] ?>, '<?= htmlspecialchars($barang['nama_barang']) ?>')"
+                                                    title="Hapus">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
@@ -461,30 +386,30 @@ $flash = getFlashMessage();
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <!-- Pagination -->
                     <?php if ($total_pages > 1): ?>
                         <nav aria-label="Page navigation" class="mt-4">
                             <ul class="pagination justify-content-center">
                                 <?php if ($page > 1): ?>
                                     <li class="page-item">
-                                        <a class="page-link" href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&kategori=<?= $kategori_filter ?>&lokasi=<?= $lokasi_filter ?>">
+                                        <a class="page-link" href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&kategori=<?= $kategori_filter ?>">
                                             <i class="fas fa-chevron-left"></i>
                                         </a>
                                     </li>
                                 <?php endif; ?>
-                                
+
                                 <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
                                     <li class="page-item <?= $i == $page ? 'active' : '' ?>">
-                                        <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&kategori=<?= $kategori_filter ?>&lokasi=<?= $lokasi_filter ?>">
+                                        <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&kategori=<?= $kategori_filter ?>">
                                             <?= $i ?>
                                         </a>
                                     </li>
                                 <?php endfor; ?>
-                                
+
                                 <?php if ($page < $total_pages): ?>
                                     <li class="page-item">
-                                        <a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&kategori=<?= $kategori_filter ?>&lokasi=<?= $lokasi_filter ?>">
+                                        <a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&kategori=<?= $kategori_filter ?>">
                                             <i class="fas fa-chevron-right"></i>
                                         </a>
                                     </li>
@@ -565,37 +490,31 @@ $flash = getFlashMessage();
 </div>
 
 <script>
-// Export data function
-function exportData(type) {
-    const search = document.getElementById('search').value;
-    const kategori = document.getElementById('kategori').value;
-    const lokasi = document.getElementById('lokasi').value;
-    
-    let url = `export_barang.php?type=${type}`;
-    if (search) url += `&search=${encodeURIComponent(search)}`;
-    if (kategori) url += `&kategori=${kategori}`;
-    if (lokasi) url += `&lokasi=${lokasi}`;
-    
-    window.open(url, '_blank');
-}
+    // Export data function
+    function exportData(type) {
+        const search = document.getElementById('search').value;
+        const kategori = document.getElementById('kategori').value;
 
-// Auto-submit form on filter change
-document.getElementById('kategori').addEventListener('change', function() {
-    this.form.submit();
-});
+        let url = `export_barang.php?type=${type}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        if (kategori) url += `&kategori=${kategori}`;
 
-document.getElementById('lokasi').addEventListener('change', function() {
-    this.form.submit();
-});
+        window.open(url, '_blank');
+    }
 
-// Detail popup function
-function showDetail(id) {
-    // Show modal
-    const modal = new bootstrap.Modal(document.getElementById('detailModal'));
-    modal.show();
-    
-    // Show loading
-    document.getElementById('detailModalBody').innerHTML = `
+    // Auto-submit form on filter change
+    document.getElementById('kategori').addEventListener('change', function() {
+        this.form.submit();
+    });
+
+    // Detail popup function
+    function showDetail(id) {
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+        modal.show();
+
+        // Show loading
+        document.getElementById('detailModalBody').innerHTML = `
         <div class="text-center py-4">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
@@ -603,43 +522,33 @@ function showDetail(id) {
             <p class="mt-2">Memuat detail barang...</p>
         </div>
     `;
-    
-    // Fetch data
-    fetch(`?action=get_detail&id=${id}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                document.getElementById('detailModalBody').innerHTML = `
+
+        // Fetch data
+        fetch(`?action=get_detail&id=${id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('detailModalBody').innerHTML = `
                     <div class="text-center py-4">
                         <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
                         <h5>Error</h5>
                         <p class="text-muted">${data.error}</p>
                     </div>
                 `;
-            } else {
-                // Format data
-                const barang = data;
-                let fotoHtml;
-                if (barang.foto) {
-                    fotoHtml = `<img src="../../uploads/${barang.foto}" alt="${barang.nama_barang}" class="img-fluid rounded" style="max-height: 300px; object-fit: cover;">`;
                 } else {
-                    fotoHtml = `<div class='d-flex flex-column align-items-center justify-content-center' style='height:200px;'>
+                    // Format data
+                    const barang = data;
+                    let fotoHtml;
+                    if (barang.foto) {
+                        fotoHtml = `<img src="../../uploads/${barang.foto}" alt="${barang.nama_barang}" class="img-fluid rounded" style="max-height: 300px; object-fit: cover;">`;
+                    } else {
+                        fotoHtml = `<div class='d-flex flex-column align-items-center justify-content-center' style='height:200px;'>
                         <i class='fas fa-box-open fa-5x text-secondary mb-2'></i>
                         <div class='text-muted'>Tidak ada foto</div>
                     </div>`;
-                }
-                const kondisiClass = {
-                    'baik': 'success',
-                    'rusak_ringan': 'warning',
-                    'rusak_berat': 'danger'
-                };
-                const kondisiText = {
-                    'baik': 'Baik',
-                    'rusak_ringan': 'Rusak Ringan',
-                    'rusak_berat': 'Rusak Berat'
-                };
-                
-                document.getElementById('detailModalBody').innerHTML = `
+                    }
+
+                    document.getElementById('detailModalBody').innerHTML = `
                     <div class="row">
                         <div class="col-md-4">
                             <div class="text-center mb-3">
@@ -648,31 +557,15 @@ function showDetail(id) {
                         </div>
                         <div class="col-md-8">
                             <div class="row">
-                                <div class="col-md-6">
-                                    <h6 class="text-muted mb-1">Kode Barang</h6>
-                                    <p class="fw-bold mb-3">${barang.kode_barang}</p>
-                                    
+                                <div class="col-md-6">                                    
                                     <h6 class="text-muted mb-1">Nama Barang</h6>
                                     <p class="fw-bold mb-3">${barang.nama_barang}</p>
                                     
                                     <h6 class="text-muted mb-1">Kategori</h6>
                                     <p class="fw-bold mb-3">${barang.nama_kategori || '-'}</p>
                                     
-                                    <h6 class="text-muted mb-1">Lokasi</h6>
-                                    <p class="fw-bold mb-3">${barang.nama_lokasi || '-'}</p>
                                 </div>
-                                <div class="col-md-6">
-                                    <h6 class="text-muted mb-1">Jumlah Total</h6>
-                                    <p class="fw-bold mb-3">${barang.jumlah_total} unit</p>
-                                    
-                                    <h6 class="text-muted mb-1">Jumlah Tersedia</h6>
-                                    <p class="fw-bold mb-3">${barang.jumlah_tersedia} unit</p>
-                                    
-                                    <h6 class="text-muted mb-1">Kondisi</h6>
-                                    <span class="badge bg-${kondisiClass[barang.kondisi] || 'secondary'} mb-3">
-                                        ${kondisiText[barang.kondisi] || barang.kondisi}
-                                    </span>
-                                    
+                                <div class="col-md-6">                                    
                                     <h6 class="text-muted mb-1">Tanggal Input</h6>
                                     <p class="fw-bold mb-3">${new Date(barang.created_at).toLocaleDateString('id-ID')}</p>
                                 </div>
@@ -687,58 +580,55 @@ function showDetail(id) {
                         </div>
                     </div>
                 `;
-                
-                // Show edit button
-                document.getElementById('editBarangBtn').style.display = 'inline-block';
-                document.getElementById('editBarangBtn').onclick = function() {
-                    window.location.href = `?action=edit&id=${barang.id}`;
-                };
-            }
-        })
-        .catch(error => {
-            document.getElementById('detailModalBody').innerHTML = `
+
+                    // Show edit button
+                    document.getElementById('editBarangBtn').style.display = 'inline-block';
+                    document.getElementById('editBarangBtn').onclick = function() {
+                        window.location.href = `?action=edit&id=${barang.id}`;
+                    };
+                }
+            })
+            .catch(error => {
+                document.getElementById('detailModalBody').innerHTML = `
                 <div class="text-center py-4">
                     <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
                     <h5>Error</h5>
                     <p class="text-muted">Terjadi kesalahan saat memuat data</p>
                 </div>
             `;
-        });
-}
+            });
+    }
 
-// Reset modal when closed
-document.getElementById('detailModal').addEventListener('hidden.bs.modal', function() {
-    document.getElementById('editBarangBtn').style.display = 'none';
-});
+    // Reset modal when closed
+    document.getElementById('detailModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('editBarangBtn').style.display = 'none';
+    });
 
-// Show delete confirmation modal
-function showDeleteModal(id, namaBarang, kodeBarang) {
-    // Set info barang yang akan dihapus
-    document.getElementById('deleteItemInfo').innerHTML = `
+    // Show delete confirmation modal
+    function showDeleteModal(id, namaBarang) {
+        // Set info barang yang akan dihapus
+        document.getElementById('deleteItemInfo').innerHTML = `
         <div class="card border-danger">
             <div class="card-body">
                 <h6 class="card-title text-danger">
                     <i class="fas fa-box me-2"></i>${namaBarang}
                 </h6>
-                <p class="card-text mb-1">
-                    <strong>Kode:</strong> <span class="badge bg-secondary">${kodeBarang}</span>
-                </p>
                 <p class="card-text mb-0">
                     <strong>ID:</strong> <span class="text-muted">#${id}</span>
                 </p>
             </div>
         </div>
     `;
-    
-    // Set delete URL for confirm button
-    document.getElementById('confirmDeleteBtn').onclick = function() {
-        window.location.href = `?action=delete&id=${id}`;
-    };
 
-    // Show modal
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
-}
+        // Set delete URL for confirm button
+        document.getElementById('confirmDeleteBtn').onclick = function() {
+            window.location.href = `?action=delete&id=${id}`;
+        };
+
+        // Show modal
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        deleteModal.show();
+    }
 </script>
 
-<?php require_once '../includes/footer.php'; ?> 
+<?php require_once '../includes/footer.php'; ?>

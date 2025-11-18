@@ -11,8 +11,7 @@ $current_dir = dirname($_SERVER['SCRIPT_NAME']);
 if (
     strpos($current_dir, '/admin/barang') !== false ||
     strpos($current_dir, '/admin/kategori') !== false ||
-    strpos($current_dir, '/admin/lokasi') !== false ||
-    strpos($current_dir, '/admin/peminjaman') !== false ||
+    strpos($current_dir, '/admin/transaksi') !== false ||
     strpos($current_dir, '/admin/user') !== false ||
     strpos($current_dir, '/admin/laporan') !== false ||
     strpos($current_dir, '/admin/pengaturan') !== false
@@ -55,7 +54,6 @@ $user_email = $_SESSION['email'];
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.0/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css" rel="stylesheet">
 
     <!-- Chart.js JavaScript Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
@@ -623,8 +621,7 @@ $user_email = $_SESSION['email'];
         <div class="sidebar-header">
             <a href="<?= strpos($current_dir, '/admin/barang') !== false ||
                             strpos($current_dir, '/admin/kategori') !== false ||
-                            strpos($current_dir, '/admin/lokasi') !== false ||
-                            strpos($current_dir, '/admin/peminjaman') !== false ||
+                            strpos($current_dir, '/admin/transaksi') !== false ||
                             strpos($current_dir, '/admin/user') !== false ||
                             strpos($current_dir, '/admin/laporan') !== false ||
                             strpos($current_dir, '/admin/pengaturan') !== false ? '../dashboard.php' : 'dashboard.php' ?>" class="sidebar-brand">
@@ -639,8 +636,7 @@ $user_email = $_SESSION['email'];
                     <a class="nav-link <?= $current_page == 'dashboard' ? 'active' : '' ?>"
                         href="<?= strpos($current_dir, '/admin/barang') !== false ||
                                     strpos($current_dir, '/admin/kategori') !== false ||
-                                    strpos($current_dir, '/admin/lokasi') !== false ||
-                                    strpos($current_dir, '/admin/peminjaman') !== false ||
+                                    strpos($current_dir, '/admin/transaksi') !== false ||
                                     strpos($current_dir, '/admin/user') !== false ||
                                     strpos($current_dir, '/admin/laporan') !== false ||
                                     strpos($current_dir, '/admin/pengaturan') !== false ? '../dashboard.php' : 'dashboard.php' ?>">
@@ -651,7 +647,7 @@ $user_email = $_SESSION['email'];
 
                 <li class="nav-item">
                     <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/admin/barang') !== false ? 'active' : '' ?>"
-                        href="<?= strpos($current_dir, '/admin/barang') !== false ? './' : (strpos($current_dir, '/admin/kategori') !== false ? '../barang/' : (strpos($current_dir, '/admin/lokasi') !== false ? '../barang/' : (strpos($current_dir, '/admin/peminjaman') !== false ? '../barang/' : (strpos($current_dir, '/admin/user') !== false ? '../barang/' : (strpos($current_dir, '/admin/laporan') !== false ? '../barang/' : (strpos($current_dir, '/admin/pengaturan') !== false ? '../barang/' : 'barang/')))))) ?>">
+                        href="<?= strpos($current_dir, '/admin/barang') !== false ? './' : (strpos($current_dir, '/admin/kategori') !== false ? '../barang/' : (strpos($current_dir, '/admin/transaksi') !== false ? '../barang/' : (strpos($current_dir, '/admin/user') !== false ? '../barang/' : (strpos($current_dir, '/admin/laporan') !== false ? '../barang/' : (strpos($current_dir, '/admin/pengaturan') !== false ? '../barang/' : 'barang/'))))) ?>">
                         <i class="fas fa-boxes"></i>
                         Data Barang
                     </a>
@@ -659,31 +655,23 @@ $user_email = $_SESSION['email'];
 
                 <li class="nav-item">
                     <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/admin/kategori') !== false ? 'active' : '' ?>"
-                        href="<?= strpos($current_dir, '/admin/barang') !== false ? '../kategori/' : (strpos($current_dir, '/admin/kategori') !== false ? './' : (strpos($current_dir, '/admin/lokasi') !== false ? '../kategori/' : (strpos($current_dir, '/admin/peminjaman') !== false ? '../kategori/' : (strpos($current_dir, '/admin/user') !== false ? '../kategori/' : (strpos($current_dir, '/admin/laporan') !== false ? '../kategori/' : (strpos($current_dir, '/admin/pengaturan') !== false ? '../kategori/' : 'kategori/')))))) ?>">
+                        href="<?= strpos($current_dir, '/admin/barang') !== false ? '../kategori/' : (strpos($current_dir, '/admin/kategori') !== false ? './' : (strpos($current_dir, '/admin/transaksi') !== false ? '../kategori/' : (strpos($current_dir, '/admin/user') !== false ? '../kategori/' : (strpos($current_dir, '/admin/laporan') !== false ? '../kategori/' : (strpos($current_dir, '/admin/pengaturan') !== false ? '../kategori/' : 'kategori/'))))) ?>">
                         <i class="fas fa-tags"></i>
                         Kategori
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/admin/lokasi') !== false ? 'active' : '' ?>"
-                        href="<?= strpos($current_dir, '/admin/barang') !== false || strpos($current_dir, '/admin/kategori') !== false ? '../lokasi/' : (strpos($current_dir, '/admin/lokasi') !== false ? './' : (strpos($current_dir, '/admin/peminjaman') !== false ? '../lokasi/' : (strpos($current_dir, '/admin/user') !== false ? '../lokasi/' : (strpos($current_dir, '/admin/laporan') !== false ? '../lokasi/' : (strpos($current_dir, '/admin/pengaturan') !== false ? '../lokasi/' : 'lokasi/'))))) ?>">
-                        <i class="fas fa-map-marker-alt"></i>
-                        Lokasi Barang
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/admin/peminjaman') !== false ? 'active' : '' ?>"
-                        href="<?= strpos($current_dir, '/admin/barang') !== false || strpos($current_dir, '/admin/kategori') !== false ? '../peminjaman/' : (strpos($current_dir, '/admin/lokasi') !== false ? '../peminjaman/' : (strpos($current_dir, '/admin/peminjaman') !== false ? './' : (strpos($current_dir, '/admin/user') !== false ? '../peminjaman/' : (strpos($current_dir, '/admin/laporan') !== false ? '../peminjaman/' : (strpos($current_dir, '/admin/pengaturan') !== false ? '../peminjaman/' : 'peminjaman/'))))) ?>">
+                    <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/admin/transaksi') !== false ? 'active' : '' ?>"
+                        href="<?= strpos($current_dir, '/admin/barang') !== false || strpos($current_dir, '/admin/kategori') !== false ? '../transaksi/' : (strpos($current_dir, '/admin/transaksi') !== false ? './' : (strpos($current_dir, '/admin/user') !== false ? '../transaksi/' : (strpos($current_dir, '/admin/laporan') !== false ? '../transaksi/' : (strpos($current_dir, '/admin/pengaturan') !== false ? '../transaksi/' : 'transaksi/')))) ?>">
                         <i class="fas fa-handshake"></i>
-                        Peminjaman
+                        Data Transaksi
                     </a>
                 </li>
 
                 <li class="nav-item">
                     <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/admin/user') !== false ? 'active' : '' ?>"
-                        href="<?= strpos($current_dir, '/admin/barang') !== false || strpos($current_dir, '/admin/kategori') !== false ? '../user/' : (strpos($current_dir, '/admin/lokasi') !== false ? '../user/' : (strpos($current_dir, '/admin/peminjaman') !== false ? '../user/' : (strpos($current_dir, '/admin/user') !== false ? './' : (strpos($current_dir, '/admin/laporan') !== false ? '../user/' : (strpos($current_dir, '/admin/pengaturan') !== false ? '../user/' : 'user/'))))) ?>">
+                        href="<?= strpos($current_dir, '/admin/barang') !== false || strpos($current_dir, '/admin/kategori') !== false ? '../user/' : (strpos($current_dir, '/admin/transaksi') !== false ? '../user/' : (strpos($current_dir, '/admin/user') !== false ? './' : (strpos($current_dir, '/admin/laporan') !== false ? '../user/' : (strpos($current_dir, '/admin/pengaturan') !== false ? '../user/' : 'user/')))) ?>">
                         <i class="fas fa-users"></i>
                         Kelola User
                     </a>
@@ -691,7 +679,7 @@ $user_email = $_SESSION['email'];
 
                 <li class="nav-item">
                     <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/admin/laporan') !== false ? 'active' : '' ?>"
-                        href="<?= strpos($current_dir, '/admin/barang') !== false || strpos($current_dir, '/admin/kategori') !== false ? '../laporan/' : (strpos($current_dir, '/admin/lokasi') !== false ? '../laporan/' : (strpos($current_dir, '/admin/peminjaman') !== false ? '../laporan/' : (strpos($current_dir, '/admin/user') !== false ? '../laporan/' : (strpos($current_dir, '/admin/laporan') !== false ? './' : (strpos($current_dir, '/admin/pengaturan') !== false ? '../laporan/' : 'laporan/'))))) ?>">
+                        href="<?= strpos($current_dir, '/admin/barang') !== false || strpos($current_dir, '/admin/kategori') !== false ? '../laporan/' : (strpos($current_dir, '/admin/transaksi') !== false ? '../laporan/' : (strpos($current_dir, '/admin/user') !== false ? '../laporan/' : (strpos($current_dir, '/admin/laporan') !== false ? './' : (strpos($current_dir, '/admin/pengaturan') !== false ? '../laporan/' : 'laporan/')))) ?>">
                         <i class="fas fa-chart-bar"></i>
                         Laporan
                     </a>
@@ -699,7 +687,7 @@ $user_email = $_SESSION['email'];
 
                 <li class="nav-item">
                     <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/admin/pengaturan') !== false ? 'active' : '' ?>"
-                        href="<?= strpos($current_dir, '/admin/barang') !== false || strpos($current_dir, '/admin/kategori') !== false ? '../pengaturan/' : (strpos($current_dir, '/admin/lokasi') !== false ? '../pengaturan/' : (strpos($current_dir, '/admin/peminjaman') !== false ? '../pengaturan/' : (strpos($current_dir, '/admin/user') !== false ? '../pengaturan/' : (strpos($current_dir, '/admin/laporan') !== false ? '../pengaturan/' : (strpos($current_dir, '/admin/pengaturan') !== false ? './' : 'pengaturan/'))))) ?>">
+                        href="<?= strpos($current_dir, '/admin/barang') !== false || strpos($current_dir, '/admin/kategori') !== false ? '../pengaturan/' : (strpos($current_dir, '/admin/transaksi') !== false ? '../pengaturan/' : (strpos($current_dir, '/admin/user') !== false ? '../pengaturan/' : (strpos($current_dir, '/admin/laporan') !== false ? '../pengaturan/' : (strpos($current_dir, '/admin/pengaturan') !== false ? './' : 'pengaturan/')))) ?>">
                         <i class="fas fa-cog"></i>
                         Pengaturan
                     </a>
@@ -708,9 +696,9 @@ $user_email = $_SESSION['email'];
         </nav>
 
         <div class="sidebar-footer" style="position: absolute; bottom: 20px; left: 20px; right: 20px;">
-            <a href="https://youtube.com/@klikkoding?si=rDnT-8jmno-88mx2" target="_blank" class="text-white text-decoration-none">
-                <small><i class="fas fa-code me-1"></i>Klik Koding</small>
-            </a>
+            <p class="text-white text-decoration-none">
+                <small><i class="fas fa-book me-1">&nbsp;</i>Sistem Inventaris Sekolah</small>
+            </p>
         </div>
     </div>
 
@@ -731,8 +719,7 @@ $user_email = $_SESSION['email'];
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="<?= strpos($current_dir, '/admin/barang') !== false ||
                                                                         strpos($current_dir, '/admin/kategori') !== false ||
-                                                                        strpos($current_dir, '/admin/lokasi') !== false ||
-                                                                        strpos($current_dir, '/admin/peminjaman') !== false ||
+                                                                        strpos($current_dir, '/admin/transaksi') !== false ||
                                                                         strpos($current_dir, '/admin/user') !== false ||
                                                                         strpos($current_dir, '/admin/laporan') !== false ||
                                                                         strpos($current_dir, '/admin/pengaturan') !== false ? '../dashboard.php' : 'dashboard.php' ?>">Admin</a></li>
@@ -756,15 +743,13 @@ $user_email = $_SESSION['email'];
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="<?= strpos($current_dir, '/admin/barang') !== false ||
                                                                 strpos($current_dir, '/admin/kategori') !== false ||
-                                                                strpos($current_dir, '/admin/lokasi') !== false ||
-                                                                strpos($current_dir, '/admin/peminjaman') !== false ||
+                                                                strpos($current_dir, '/admin/transaksi') !== false ||
                                                                 strpos($current_dir, '/admin/user') !== false ||
                                                                 strpos($current_dir, '/admin/laporan') !== false ||
                                                                 strpos($current_dir, '/admin/pengaturan') !== false ? '../profile.php' : 'profile.php' ?>"><i class="fas fa-user"></i> Profile</a></li>
                         <li><a class="dropdown-item" href="<?= strpos($current_dir, '/admin/barang') !== false ||
                                                                 strpos($current_dir, '/admin/kategori') !== false ||
-                                                                strpos($current_dir, '/admin/lokasi') !== false ||
-                                                                strpos($current_dir, '/admin/peminjaman') !== false ||
+                                                                strpos($current_dir, '/admin/transaksi') !== false ||
                                                                 strpos($current_dir, '/admin/user') !== false ||
                                                                 strpos($current_dir, '/admin/laporan') !== false ||
                                                                 strpos($current_dir, '/admin/pengaturan') !== false ? '../change-password.php' : 'change-password.php' ?>"><i class="fas fa-key"></i> Ganti Password</a></li>

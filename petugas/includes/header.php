@@ -666,9 +666,9 @@ $user_email = $_SESSION['email'];
         </nav>
 
         <div class="sidebar-footer" style="position: absolute; bottom: 20px; left: 20px; right: 20px;">
-            <a href="https://youtube.com/@klikkoding?si=rDnT-8jmno-88mx2" target="_blank" class="text-white text-decoration-none">
-                <small><i class="fas fa-code me-1"></i>Klik Koding</small>
-            </a>
+            <p class="text-white text-decoration-none">
+                <small><i class="fas fa-book me-1">&nbsp;</i>Sistem Inventaris Sekolah</small>
+            </p>
         </div>
     </div>
 
