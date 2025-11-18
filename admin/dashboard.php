@@ -22,10 +22,14 @@ try {
     $stmt = $pdo->query("SELECT COUNT(*) as barang_rusak FROM barang WHERE kondisi IN ('rusak_ringan', 'rusak_berat')");
     $barang_rusak = $stmt->fetchColumn();
 
+    $stmt = $pdo->query("SELECT COUNT(*) as barang_baik FROM barang WHERE kondisi IN ('baik')");
+    $barang_baik = $stmt->fetchColumn();
+
     $stats = [
         'total_barang' => $total_barang,
         'total_kategori' => $total_kategori,
-        'barang_rusak' => $barang_rusak
+        'barang_rusak' => $barang_rusak,
+        'barang_baik' => $barang_baik
     ];
 
     // Data barang per kategori
@@ -95,6 +99,18 @@ try {
 
     <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
         <div class="stat-card">
+            <div class="stat-icon success">
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number"><?= number_format($stats['barang_baik']) ?></div>
+                <div class="stat-label">Barang Baik</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
+        <div class="stat-card">
             <div class="stat-icon danger">
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
@@ -120,11 +136,7 @@ try {
             </div>
         </div>
     </div>
-</div>
-
-<!-- Quick Actions -->
-<div class="row mt-4">
-    <div class="col-12">
+    <div class="col-xl-8 col-lg-12 mb-4">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Aksi Cepat</h5>
@@ -137,8 +149,8 @@ try {
                         </a>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <a href="peminjaman/" class="btn btn-success w-100">
-                            <i class="fas fa-handshake me-2"></i>Peminjaman
+                        <a href="transaksi/" class="btn btn-success w-100">
+                            <i class="fas fa-handshake me-2"></i>Transaksi
                         </a>
                     </div>
                     <div class="col-md-3 mb-3">
@@ -155,6 +167,11 @@ try {
             </div>
         </div>
     </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+
 </div>
 
 <script>
