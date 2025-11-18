@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Kelola User - Admin Panel
  * Sistem Inventaris Sekolah
@@ -10,24 +11,22 @@ require_once '../../config/functions.php';
 // AJAX handler untuk get detail
 if (isset($_GET['action']) && $_GET['action'] == 'get_detail') {
     header('Content-Type: application/json');
-    
+
     try {
         $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+
         $id = $_GET['id'] ?? 0;
         $stmt = $pdo->prepare("
             SELECT 
-                u.*,
-                COUNT(p.id) as total_peminjaman
+                u.*
             FROM users u
-            LEFT JOIN peminjaman p ON u.id = p.created_by
             WHERE u.id = ?
             GROUP BY u.id
         ");
         $stmt->execute([$id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($user) {
             echo json_encode([
                 'success' => true,
@@ -39,7 +38,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_detail') {
                 'message' => 'User tidak ditemukan'
             ]);
         }
-    } catch(Exception $e) {
+    } catch (Exception $e) {
         echo json_encode([
             'success' => false,
             'message' => 'Terjadi kesalahan saat memuat data'
@@ -65,37 +64,15 @@ if ($action == 'delete' && isset($_GET['id'])) {
     try {
         $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+
         $user_id = $_GET['id'];
-        
+
         // Cek apakah user yang akan dihapus adalah diri sendiri
         if ($user_id == $_SESSION['user_id']) {
             echo "<script>alert('Anda tidak dapat menghapus akun sendiri!'); window.location.href='index.php';</script>";
             exit();
         }
-        
-        // Cek apakah user digunakan oleh peminjaman
-        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM peminjaman WHERE created_by = ?");
-        $stmt->execute([$user_id]);
-        $peminjaman_count = $stmt->fetch()['count'];
-        
-        if ($peminjaman_count > 0) {
-            $error = "User tidak dapat dihapus karena masih memiliki $peminjaman_count data peminjaman!";
-            echo "<script>alert('$error'); window.location.href='index.php';</script>";
-            exit();
-        }
-        
-        // Cek apakah user digunakan oleh barang
-        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM barang WHERE created_by = ?");
-        $stmt->execute([$user_id]);
-        $barang_count = $stmt->fetch()['count'];
-        
-        if ($barang_count > 0) {
-            $error = "User tidak dapat dihapus karena masih memiliki $barang_count data barang!";
-            echo "<script>alert('$error'); window.location.href='index.php';</script>";
-            exit();
-        }
-        
+
         // Hapus user
         $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
         if ($stmt->execute([$user_id])) {
@@ -105,7 +82,7 @@ if ($action == 'delete' && isset($_GET['id'])) {
             echo "<script>alert('User tidak ditemukan!'); window.location.href='index.php';</script>";
             exit();
         }
-    } catch(Exception $e) {
+    } catch (Exception $e) {
         echo "<script>alert('Gagal menghapus user!'); window.location.href='index.php';</script>";
         exit();
     }
@@ -116,20 +93,20 @@ if ($action == 'toggle_status' && isset($_GET['id'])) {
     try {
         $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+
         $user_id = $_GET['id'];
-        
+
         // Cek apakah user yang akan diubah adalah diri sendiri
         if ($user_id == $_SESSION['user_id']) {
             echo "<script>alert('Anda tidak dapat mengubah status akun sendiri!'); window.location.href='index.php';</script>";
             exit();
         }
-        
+
         // Get current status
         $stmt = $pdo->prepare("SELECT status FROM users WHERE id = ?");
         $stmt->execute([$user_id]);
         $current_status = $stmt->fetch()['status'];
-        
+
         // Toggle status
         $new_status = ($current_status == 'aktif') ? 'nonaktif' : 'aktif';
         $stmt = $pdo->prepare("UPDATE users SET status = ? WHERE id = ?");
@@ -141,7 +118,7 @@ if ($action == 'toggle_status' && isset($_GET['id'])) {
             echo "<script>alert('Gagal mengubah status user!'); window.location.href='index.php';</script>";
             exit();
         }
-    } catch(Exception $e) {
+    } catch (Exception $e) {
         echo "<script>alert('Gagal mengubah status user!'); window.location.href='index.php';</script>";
         exit();
     }
@@ -196,10 +173,8 @@ try {
     // Query untuk data user
     $query = "
         SELECT 
-            u.*,
-            COUNT(p.id) as total_peminjaman
+            u.*
         FROM users u
-        LEFT JOIN peminjaman p ON u.id = p.created_by
         $where_clause
         GROUP BY u.id
         ORDER BY u.created_at DESC
@@ -209,8 +184,7 @@ try {
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $user_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-} catch(Exception $e) {
+} catch (Exception $e) {
     $user_list = [];
     $total_records = 0;
     $total_pages = 0;
@@ -230,7 +204,7 @@ try {
     while ($row = $stmt->fetch()) {
         $role_counts[$row['role']] = $row['count'];
     }
-} catch(Exception $e) {
+} catch (Exception $e) {
     $role_counts = [];
 }
 
@@ -248,7 +222,7 @@ try {
     while ($row = $stmt->fetch()) {
         $status_counts[$row['status']] = $row['count'];
     }
-} catch(Exception $e) {
+} catch (Exception $e) {
     $status_counts = [];
 }
 ?>
@@ -353,9 +327,9 @@ try {
                             <span class="input-group-text">
                                 <i class="fas fa-search"></i>
                             </span>
-                            <input type="text" class="form-control" id="search" name="search" 
-                                   placeholder="Cari username, nama lengkap, atau email..." value="<?= htmlspecialchars($search) ?>"
-                                   autocomplete="off">
+                            <input type="text" class="form-control" id="search" name="search"
+                                placeholder="Cari username, nama lengkap, atau email..." value="<?= htmlspecialchars($search) ?>"
+                                autocomplete="off">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-search me-2"></i>Cari
                             </button>
@@ -438,7 +412,7 @@ try {
                     </div>
                 <?php else: ?>
                     <div class="table-responsive">
-                        <table class="table table-hover" id="userTable">
+                        <table class="table table-hover text-center" id="userTable">
                             <thead class="table-light">
                                 <tr>
                                     <th width="5%">No</th>
@@ -446,8 +420,6 @@ try {
                                     <th width="15%">Role</th>
                                     <th width="20%">Kontak</th>
                                     <th width="10%">Status</th>
-                                    <th width="10%">Aktivitas</th>
-                                    <th width="10%">Tanggal Dibuat</th>
                                     <th width="10%">Aksi</th>
                                 </tr>
                             </thead>
@@ -458,8 +430,8 @@ try {
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <?php if ($user['foto']): ?>
-                                                    <img src="../../uploads/<?= htmlspecialchars($user['foto']) ?>" 
-                                                         class="avatar-sm rounded-circle me-3" alt="Foto User">
+                                                    <img src="../../uploads/<?= htmlspecialchars($user['foto']) ?>"
+                                                        class="avatar-sm rounded-circle me-3" alt="Foto User">
                                                 <?php else: ?>
                                                     <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-3">
                                                         <i class="fas fa-user text-white"></i>
@@ -475,7 +447,7 @@ try {
                                             <?php
                                             $role_class = '';
                                             $role_icon = '';
-                                            switch($user['role']) {
+                                            switch ($user['role']) {
                                                 case 'admin':
                                                     $role_class = 'bg-danger';
                                                     $role_icon = 'fas fa-user-shield';
@@ -510,35 +482,25 @@ try {
                                             </span>
                                         </td>
                                         <td>
-                                            <span class="badge bg-info">
-                                                <?= number_format($user['total_peminjaman']) ?> peminjaman
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                <?= date('d/m/Y', strtotime($user['created_at'])) ?>
-                                            </small>
-                                        </td>
-                                        <td>
                                             <div class="btn-group" role="group">
-                                                <button type="button" class="btn btn-sm btn-outline-info" 
-                                                        onclick="showDetail(<?= $user['id'] ?>)" 
-                                                        title="Detail">
+                                                <button type="button" class="btn btn-sm btn-outline-info"
+                                                    onclick="showDetail(<?= $user['id'] ?>)"
+                                                    title="Detail">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <a href="?action=edit&id=<?= $user['id'] ?>" 
-                                                   class="btn btn-sm btn-outline-warning" title="Edit">
+                                                <a href="?action=edit&id=<?= $user['id'] ?>"
+                                                    class="btn btn-sm btn-outline-warning" title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
                                                 <?php if ($user['id'] != $_SESSION['user_id']): ?>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary" 
-                                                            onclick="confirmToggleStatus(<?= $user['id'] ?>, '<?= htmlspecialchars($user['nama_lengkap']) ?>', '<?= $user['status'] ?>')" 
-                                                            title="<?= $user['status'] == 'aktif' ? 'Nonaktifkan' : 'Aktifkan' ?>">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                        onclick="confirmToggleStatus(<?= $user['id'] ?>, '<?= htmlspecialchars($user['nama_lengkap']) ?>', '<?= $user['status'] ?>')"
+                                                        title="<?= $user['status'] == 'aktif' ? 'Nonaktifkan' : 'Aktifkan' ?>">
                                                         <i class="fas fa-<?= $user['status'] == 'aktif' ? 'ban' : 'check' ?>"></i>
                                                     </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                            onclick="confirmDelete(<?= $user['id'] ?>, '<?= htmlspecialchars($user['nama_lengkap']) ?>', <?= $user['total_peminjaman'] ?>)" 
-                                                            title="Hapus">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        onclick="confirmDelete(<?= $user['id'] ?>, '<?= htmlspecialchars($user['nama_lengkap']) ?>')"
+                                                        title="Hapus">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 <?php endif; ?>
@@ -549,7 +511,7 @@ try {
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <!-- Pagination -->
                     <?php if ($total_pages > 1): ?>
                         <nav aria-label="Page navigation" class="mt-4">
@@ -561,7 +523,7 @@ try {
                                         </a>
                                     </li>
                                 <?php endif; ?>
-                                
+
                                 <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
                                     <li class="page-item <?= $i == $page ? 'active' : '' ?>">
                                         <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&role=<?= urlencode($role_filter) ?>&status=<?= urlencode($status_filter) ?>">
@@ -569,7 +531,7 @@ try {
                                         </a>
                                     </li>
                                 <?php endfor; ?>
-                                
+
                                 <?php if ($page < $total_pages): ?>
                                     <li class="page-item">
                                         <a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&role=<?= urlencode($role_filter) ?>&status=<?= urlencode($status_filter) ?>">
@@ -628,11 +590,6 @@ try {
                 <h6 class="text-center mb-3">Apakah Anda yakin ingin menghapus user ini?</h6>
                 <div class="alert alert-warning">
                     <strong>Nama User:</strong> <span id="deleteUserName"></span><br>
-                    <strong>Total Peminjaman:</strong> <span id="deletePeminjamanCount"></span> data
-                </div>
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Perhatian:</strong> User yang masih memiliki data peminjaman atau barang tidak dapat dihapus.
                 </div>
             </div>
             <div class="modal-footer">
@@ -675,13 +632,13 @@ try {
 </div>
 
 <script>
-// Detail modal functionality
-function showDetail(id) {
-    const modal = new bootstrap.Modal(document.getElementById('detailModal'));
-    const modalBody = document.getElementById('detailModalBody');
-    
-    // Show loading
-    modalBody.innerHTML = `
+    // Detail modal functionality
+    function showDetail(id) {
+        const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+        const modalBody = document.getElementById('detailModalBody');
+
+        // Show loading
+        modalBody.innerHTML = `
         <div class="text-center py-4">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
@@ -689,21 +646,21 @@ function showDetail(id) {
             <p class="mt-2">Memuat data...</p>
         </div>
     `;
-    
-    modal.show();
-    
-    // Fetch data
-    fetch(`?action=get_detail&id=${id}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const user = data.data;
-                const roleClass = getRoleClass(user.role);
-                const roleIcon = getRoleIcon(user.role);
-                const statusClass = user.status == 'aktif' ? 'bg-success' : 'bg-warning';
-                const statusText = user.status == 'aktif' ? 'Aktif' : 'Nonaktif';
-                
-                modalBody.innerHTML = `
+
+        modal.show();
+
+        // Fetch data
+        fetch(`?action=get_detail&id=${id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const user = data.data;
+                    const roleClass = getRoleClass(user.role);
+                    const roleIcon = getRoleIcon(user.role);
+                    const statusClass = user.status == 'aktif' ? 'bg-success' : 'bg-warning';
+                    const statusText = user.status == 'aktif' ? 'Aktif' : 'Nonaktif';
+
+                    modalBody.innerHTML = `
                     <div class="row">
                         <div class="col-md-12">
                             <div class="text-center mb-4">
@@ -753,10 +710,6 @@ function showDetail(id) {
                                     <h6><i class="fas fa-chart-bar me-2"></i>Statistik Aktivitas</h6>
                                     <table class="table table-sm">
                                         <tr>
-                                            <td><strong>Total Peminjaman:</strong></td>
-                                            <td><span class="badge bg-info">${user.total_peminjaman} data</span></td>
-                                        </tr>
-                                        <tr>
                                             <td><strong>Bergabung Sejak:</strong></td>
                                             <td>${new Date(user.created_at).toLocaleDateString('id-ID')}</td>
                                         </tr>
@@ -770,225 +723,232 @@ function showDetail(id) {
                         </div>
                     </div>
                 `;
-            } else {
-                modalBody.innerHTML = `
+                } else {
+                    modalBody.innerHTML = `
                     <div class="text-center py-4">
                         <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
                         <h5 class="text-warning">Data tidak ditemukan</h5>
                         <p class="text-muted">User yang Anda cari tidak ditemukan atau telah dihapus.</p>
                     </div>
                 `;
-            }
-        })
-        .catch(error => {
-            modalBody.innerHTML = `
+                }
+            })
+            .catch(error => {
+                modalBody.innerHTML = `
                 <div class="text-center py-4">
                     <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
                     <h5 class="text-danger">Terjadi Kesalahan</h5>
                     <p class="text-muted">Gagal memuat data user. Silakan coba lagi.</p>
                 </div>
             `;
-        });
-}
-
-// Delete confirmation
-let deleteId = null;
-
-function confirmDelete(id, nama, totalPeminjaman) {
-    deleteId = id;
-    document.getElementById('deleteUserName').textContent = nama;
-    document.getElementById('deletePeminjamanCount').textContent = totalPeminjaman;
-    
-    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    modal.show();
-}
-
-document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-    if (deleteId) {
-        window.location.href = `?action=delete&id=${deleteId}`;
+            });
     }
-});
 
-// Toggle status confirmation
-let toggleStatusId = null;
-let toggleStatusCurrentStatus = null;
+    // Delete confirmation
+    let deleteId = null;
 
-function confirmToggleStatus(id, nama, currentStatus) {
-    toggleStatusId = id;
-    toggleStatusCurrentStatus = currentStatus;
-    
-    const modal = new bootstrap.Modal(document.getElementById('toggleStatusModal'));
-    const header = document.getElementById('toggleStatusModalHeader');
-    const icon = document.getElementById('toggleStatusIcon');
-    const message = document.getElementById('toggleStatusMessage');
-    const userName = document.getElementById('toggleStatusUserName');
-    const confirmBtn = document.getElementById('confirmToggleStatusBtn');
-    
-    userName.textContent = nama;
-    
-    if (currentStatus === 'aktif') {
-        header.className = 'modal-header bg-warning text-white';
-        icon.className = 'fas fa-ban fa-3x text-warning';
-        message.textContent = 'Apakah Anda yakin ingin menonaktifkan user ini?';
-        confirmBtn.className = 'btn btn-warning';
-        confirmBtn.innerHTML = '<i class="fas fa-ban me-2"></i>Nonaktifkan';
-    } else {
-        header.className = 'modal-header bg-success text-white';
-        icon.className = 'fas fa-check-circle fa-3x text-success';
-        message.textContent = 'Apakah Anda yakin ingin mengaktifkan user ini?';
-        confirmBtn.className = 'btn btn-success';
-        confirmBtn.innerHTML = '<i class="fas fa-check me-2"></i>Aktifkan';
-    }
-    
-    modal.show();
-}
+    function confirmDelete(id, nama) {
+        deleteId = id;
+        document.getElementById('deleteUserName').textContent = nama;
 
-document.getElementById('confirmToggleStatusBtn').addEventListener('click', function() {
-    if (toggleStatusId) {
-        window.location.href = `?action=toggle_status&id=${toggleStatusId}`;
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
     }
-});
 
-// Helper functions
-function getRoleClass(role) {
-    switch(role) {
-        case 'admin': return 'bg-danger';
-        case 'petugas': return 'bg-success';
-        case 'user': return 'bg-secondary';
-        default: return 'bg-secondary';
-    }
-}
-
-function getRoleIcon(role) {
-    switch(role) {
-        case 'admin': return 'fas fa-user-shield';
-        case 'petugas': return 'fas fa-user-tie';
-        case 'user': return 'fas fa-user';
-        default: return 'fas fa-user';
-    }
-}
-
-// Auto-hide alerts
-setTimeout(function() {
-    const alerts = document.querySelectorAll('.alert');
-    alerts.forEach(function(alert) {
-        alert.style.transition = 'opacity 0.5s';
-        alert.style.opacity = '0';
-        setTimeout(function() {
-            alert.style.display = 'none';
-        }, 500);
-    });
-}, 3000);
-
-// Search functionality improvements
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('search');
-    const roleFilter = document.getElementById('roleFilter');
-    const statusFilter = document.getElementById('statusFilter');
-    
-    // Auto-submit search on Enter key
-    if (searchInput) {
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.which === 13) { // Enter key
-                e.preventDefault();
-                this.closest('form').submit();
-            }
-        });
-        
-        // Clear search on Escape key
-        searchInput.addEventListener('keydown', function(e) {
-            if (e.which === 27) { // Escape key
-                e.preventDefault();
-                this.value = '';
-                window.location.href = 'index.php';
-            }
-        });
-    }
-    
-    // Auto-submit filter dropdowns
-    if (roleFilter) {
-        roleFilter.addEventListener('change', function() {
-            submitFilter();
-        });
-    }
-    
-    if (statusFilter) {
-        statusFilter.addEventListener('change', function() {
-            submitFilter();
-        });
-    }
-    
-    // Function to submit filter form
-    function submitFilter() {
-        const form = document.querySelector('form[method="GET"]');
-        if (form) {
-            form.submit();
-        }
-    }
-    
-    // Highlight search terms in results
-    <?php if (!empty($search)): ?>
-    const searchTerm = '<?= htmlspecialchars($search) ?>';
-    const cells = document.querySelectorAll('td');
-    cells.forEach(function(cell) {
-        const text = cell.textContent;
-        if (text.toLowerCase().includes(searchTerm.toLowerCase())) {
-            cell.innerHTML = text.replace(new RegExp(searchTerm, 'gi'), 
-                '<mark class="bg-warning">$&</mark>');
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (deleteId) {
+            window.location.href = `?action=delete&id=${deleteId}`;
         }
     });
-    <?php endif; ?>
-});
+
+    // Toggle status confirmation
+    let toggleStatusId = null;
+    let toggleStatusCurrentStatus = null;
+
+    function confirmToggleStatus(id, nama, currentStatus) {
+        toggleStatusId = id;
+        toggleStatusCurrentStatus = currentStatus;
+
+        const modal = new bootstrap.Modal(document.getElementById('toggleStatusModal'));
+        const header = document.getElementById('toggleStatusModalHeader');
+        const icon = document.getElementById('toggleStatusIcon');
+        const message = document.getElementById('toggleStatusMessage');
+        const userName = document.getElementById('toggleStatusUserName');
+        const confirmBtn = document.getElementById('confirmToggleStatusBtn');
+
+        userName.textContent = nama;
+
+        if (currentStatus === 'aktif') {
+            header.className = 'modal-header bg-warning text-white';
+            icon.className = 'fas fa-ban fa-3x text-warning';
+            message.textContent = 'Apakah Anda yakin ingin menonaktifkan user ini?';
+            confirmBtn.className = 'btn btn-warning';
+            confirmBtn.innerHTML = '<i class="fas fa-ban me-2"></i>Nonaktifkan';
+        } else {
+            header.className = 'modal-header bg-success text-white';
+            icon.className = 'fas fa-check-circle fa-3x text-success';
+            message.textContent = 'Apakah Anda yakin ingin mengaktifkan user ini?';
+            confirmBtn.className = 'btn btn-success';
+            confirmBtn.innerHTML = '<i class="fas fa-check me-2"></i>Aktifkan';
+        }
+
+        modal.show();
+    }
+
+    document.getElementById('confirmToggleStatusBtn').addEventListener('click', function() {
+        if (toggleStatusId) {
+            window.location.href = `?action=toggle_status&id=${toggleStatusId}`;
+        }
+    });
+
+    // Helper functions
+    function getRoleClass(role) {
+        switch (role) {
+            case 'admin':
+                return 'bg-danger';
+            case 'petugas':
+                return 'bg-success';
+            case 'user':
+                return 'bg-secondary';
+            default:
+                return 'bg-secondary';
+        }
+    }
+
+    function getRoleIcon(role) {
+        switch (role) {
+            case 'admin':
+                return 'fas fa-user-shield';
+            case 'petugas':
+                return 'fas fa-user-tie';
+            case 'user':
+                return 'fas fa-user';
+            default:
+                return 'fas fa-user';
+        }
+    }
+
+    // Auto-hide alerts
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.style.display = 'none';
+            }, 500);
+        });
+    }, 3000);
+
+    // Search functionality improvements
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search');
+        const roleFilter = document.getElementById('roleFilter');
+        const statusFilter = document.getElementById('statusFilter');
+
+        // Auto-submit search on Enter key
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    e.preventDefault();
+                    this.closest('form').submit();
+                }
+            });
+
+            // Clear search on Escape key
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.which === 27) { // Escape key
+                    e.preventDefault();
+                    this.value = '';
+                    window.location.href = 'index.php';
+                }
+            });
+        }
+
+        // Auto-submit filter dropdowns
+        if (roleFilter) {
+            roleFilter.addEventListener('change', function() {
+                submitFilter();
+            });
+        }
+
+        if (statusFilter) {
+            statusFilter.addEventListener('change', function() {
+                submitFilter();
+            });
+        }
+
+        // Function to submit filter form
+        function submitFilter() {
+            const form = document.querySelector('form[method="GET"]');
+            if (form) {
+                form.submit();
+            }
+        }
+
+        // Highlight search terms in results
+        <?php if (!empty($search)): ?>
+            const searchTerm = '<?= htmlspecialchars($search) ?>';
+            const cells = document.querySelectorAll('td');
+            cells.forEach(function(cell) {
+                const text = cell.textContent;
+                if (text.toLowerCase().includes(searchTerm.toLowerCase())) {
+                    cell.innerHTML = text.replace(new RegExp(searchTerm, 'gi'),
+                        '<mark class="bg-warning">$&</mark>');
+                }
+            });
+        <?php endif; ?>
+    });
 </script>
 
 <style>
-/* Ensure consistent styling for user items */
-.avatar-sm {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--primary-color);
-    color: white;
-    font-size: 1rem;
-}
+    /* Ensure consistent styling for user items */
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--primary-color);
+        color: white;
+        font-size: 1rem;
+    }
 
-.avatar-lg {
-    width: 80px;
-    height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--primary-color);
-    color: white;
-    font-size: 2rem;
-}
+    .avatar-lg {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--primary-color);
+        color: white;
+        font-size: 2rem;
+    }
 
-.table-hover tbody tr:hover {
-    background-color: rgba(0,0,0,.075);
-}
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, .075);
+    }
 
-.badge {
-    font-size: 0.75rem;
-    padding: 0.375rem 0.75rem;
-}
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
 
-.btn-group .btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-}
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
 
-/* Ensure search results look the same as normal results */
-.table tbody tr {
-    vertical-align: middle;
-}
+    /* Ensure search results look the same as normal results */
+    .table tbody tr {
+        vertical-align: middle;
+    }
 
-.table td {
-    padding: 0.75rem;
-}
+    .table td {
+        padding: 0.75rem;
+    }
 </style>
 
-<?php require_once '../includes/footer.php'; ?> 
+<?php require_once '../includes/footer.php'; ?>
