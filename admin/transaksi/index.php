@@ -1,11 +1,9 @@
 <?php
 
 /**
- * Data Transaksi - Admin Panel
- * Sistem Inventaris Sekolah
+ * Data Transaksi - Admin Panel (disesuaikan dengan struktur transaksi baru)
  */
 
-// Handle AJAX request untuk detail FIRST (before any output)
 $action = $_GET['action'] ?? '';
 if ($action == 'get_detail' && isset($_GET['id'])) {
     $transaksi_id = (int)$_GET['id'];
@@ -14,14 +12,9 @@ if ($action == 'get_detail' && isset($_GET['id'])) {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         $stmt = $pdo->prepare("
-            SELECT 
-                t.*,
-                b.nama_barang,
-                b.foto,
-                k.nama_kategori
+            SELECT t.*, k.nama_kategori
             FROM transaksi t
-            LEFT JOIN barang b ON t.barang_id = b.id
-            LEFT JOIN kategori k ON b.kategori_id = k.id
+            LEFT JOIN kategori k ON t.kategori_id = k.id
             WHERE t.id = ?
         ");
         $stmt->execute([$transaksi_id]);
@@ -46,7 +39,6 @@ require_once '../includes/header.php';
 ?>
 
 <style>
-    /* Responsive tweaks kept from barang index */
     @media (max-width: 768px) {
         .table-responsive {
             font-size: 0.85rem;
@@ -65,14 +57,13 @@ require_once '../includes/header.php';
 </style>
 
 <?php
-
-// If add/edit -> include form
+// include form for add/edit
 if ($action == 'add' || $action == 'edit') {
     include 'form.php';
     exit();
 }
 
-// Delete transaksi
+// delete transaksi
 if ($action == 'delete' && isset($_GET['id'])) {
     $tid = (int)$_GET['id'];
     try {
@@ -96,9 +87,10 @@ if ($action == 'delete' && isset($_GET['id'])) {
     }
 }
 
-// Filters / pagination
+// filters / pagination
 $search = isset($_GET['search']) ? validateInput($_GET['search']) : '';
-$barang_filter = isset($_GET['barang']) ? (int)$_GET['barang'] : 0;
+$kategori_filter = isset($_GET['kategori']) ? (int)$_GET['kategori'] : 0;
+$tahun_filter = isset($_GET['tahun']) ? (int)$_GET['tahun'] : 0;
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
@@ -107,27 +99,32 @@ try {
     $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // build where (gunakan named params)
+    // build where with named params
     $where = [];
     $params = [];
 
     if ($search !== '') {
-        $where[] = "(b.nama_barang LIKE :search OR t.deskripsi LIKE :search)";
+        $where[] = "(t.nama_barang LIKE :search OR t.deskripsi LIKE :search OR t.bahan LIKE :search OR t.asal LIKE :search OR k.nama_kategori LIKE :search)";
         $params[':search'] = "%{$search}%";
     }
 
-    if ($barang_filter > 0) {
-        $where[] = "t.barang_id = :barang";
-        $params[':barang'] = $barang_filter;
+    if ($kategori_filter > 0) {
+        $where[] = "t.kategori_id = :kategori";
+        $params[':kategori'] = $kategori_filter;
     }
 
-    $where_clause = $where ? "WHERE " . implode(' AND ', $where) : "";
+    if ($tahun_filter > 0) {
+        $where[] = "t.tahun_pengadaan = :tahun";
+        $params[':tahun'] = $tahun_filter;
+    }
+
+    $where_clause = $where ? "WHERE " . implode(" AND ", $where) : "";
 
     // total count
     $countSql = "
-        SELECT COUNT(*) as total
+        SELECT COUNT(*) AS total
         FROM transaksi t
-        LEFT JOIN barang b ON t.barang_id = b.id
+        LEFT JOIN kategori k ON t.kategori_id = k.id
         $where_clause
     ";
     $stmt = $pdo->prepare($countSql);
@@ -135,22 +132,17 @@ try {
     $total_records = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
     $total_pages = $total_records ? ceil($total_records / $limit) : 0;
 
-    // fetch list (pakai same named params, lalu bind limit/offset)
+    // fetch list
     $query = "
-        SELECT
-            t.*,
-            b.nama_barang,
-            b.foto,
-            k.nama_kategori
+        SELECT t.*, k.nama_kategori
         FROM transaksi t
-        LEFT JOIN barang b ON t.barang_id = b.id
-        LEFT JOIN kategori k ON b.kategori_id = k.id
+        LEFT JOIN kategori k ON t.kategori_id = k.id
         $where_clause
         ORDER BY t.created_at DESC
         LIMIT :limit OFFSET :offset
     ";
     $stmt = $pdo->prepare($query);
-    // bind named params untuk search/filter
+    // bind named params
     foreach ($params as $key => $val) {
         $stmt->bindValue($key, $val);
     }
@@ -159,19 +151,20 @@ try {
     $stmt->execute();
     $transaksi_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // barang list for filter/select
-    $barang_list = $pdo->query("SELECT id, nama_barang FROM barang ORDER BY nama_barang")->fetchAll(PDO::FETCH_ASSOC);
+    // kategori for filter
+    $kategori_list = $pdo->query("SELECT id, nama_kategori FROM kategori ORDER BY nama_kategori")->fetchAll(PDO::FETCH_ASSOC);
+
+    // tahun pengadaan for filter
+    $tahun_list = $pdo->query("SELECT DISTINCT tahun_pengadaan FROM transaksi WHERE tahun_pengadaan IS NOT NULL AND tahun_pengadaan != '' ORDER BY tahun_pengadaan DESC")->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {
+    error_log("[admin/transaksi/index.php] " . $e->getMessage());
     $transaksi_list = [];
     $total_pages = 0;
-    $barang_list = [];
+    $kategori_list = [];
+    $total_records = 0;
 }
 
-$kondisi_labels = [
-    'baik' => 'Baik',
-    'rusak_ringan' => 'Rusak Ringan',
-    'rusak_berat' => 'Rusak Berat'
-];
+$flash = getFlashMessage();
 
 ?>
 
@@ -183,7 +176,7 @@ $kondisi_labels = [
                 <div class="row align-items-center">
                     <div class="col-md-8">
                         <h2 class="mb-2">
-                            <i class="fas fa-boxes me-2"></i>Data Barang
+                            <i class="fas fa-exchange-alt me-2"></i>Data Transaksi
                         </h2>
                         <p class="text-muted mb-0">Kelola semua data transaksi inventaris sekolah</p>
                     </div>
@@ -198,6 +191,15 @@ $kondisi_labels = [
     </div>
 </div>
 
+<!-- Flash Message -->
+<?php if ($flash): ?>
+    <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show" role="alert">
+        <i class="fas fa-<?= $flash['type'] == 'success' ? 'check-circle' : 'exclamation-triangle' ?> me-2"></i>
+        <?= $flash['message'] ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
 <!-- Filter Section -->
 <div class="row mb-4">
     <div class="col-12">
@@ -206,21 +208,41 @@ $kondisi_labels = [
                 <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Data</h5>
             </div>
             <div class="card-body">
-                <form method="GET" class="row g-2">
-                    <input type="hidden" name="action" value="">
-                    <div class="col-md-4">
-                        <input type="text" name="search" id="search" class="form-control" placeholder="Cari nama barang atau deskripsi..." value="<?= htmlspecialchars($search) ?>">
+                <form method="GET" action="" class="row g-3">
+                    <div class="col-lg-4 col-md-6 col-12">
+                        <label for="search" class="form-label">Cari Barang</label>
+                        <input type="text" class="form-control" id="search" name="search"
+                            value="<?= htmlspecialchars($search) ?>" placeholder="Nama atau deskripsi...">
                     </div>
-                    <div class="col-md-3">
-                        <select name="barang" id="barang" class="form-select">
-                            <option value="0">Semua Barang</option>
-                            <?php foreach ($barang_list as $b): ?>
-                                <option value="<?= $b['id'] ?>" <?= $barang_filter == $b['id'] ? 'selected' : '' ?>><?= htmlspecialchars($b['nama_barang']) ?></option>
+                    <div class="col-lg-3 col-md-6 col-12">
+                        <label for="kategori" class="form-label">Kategori</label>
+                        <select class="form-select" id="kategori" name="kategori">
+                            <option value="">Semua Kategori</option>
+                            <?php foreach ($kategori_list as $kat): ?>
+                                <option value="<?= $kat['id'] ?>" <?= $kategori_filter == $kat['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($kat['nama_kategori']) ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <button class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Cari</button>
+                    <div class="col-lg-3 col-md-6 col-12">
+                        <label for="tahun" class="form-label">Tahun Pengadaan</label>
+                        <select class="form-select" id="tahun" name="tahun">
+                            <option value="">Semua Tahun</option>
+                            <?php foreach ($tahun_list as $th): ?>
+                                <option value="<?= $th ?>" <?= $tahun_filter == $th ? 'selected' : '' ?>>
+                                    <?= $th ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-lg-2 col-md-6 col-12">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-2"></i><span class="d-none d-md-inline">Cari</span>
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -228,7 +250,7 @@ $kondisi_labels = [
     </div>
 </div>
 
-<!-- Data Table -->
+<!-- Table -->
 <div class="row">
     <div class="col-12">
         <div class="card">
@@ -242,16 +264,18 @@ $kondisi_labels = [
                     </div>
                 <?php else: ?>
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle text-center">
-                            <thead class="table-light">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light text-center">
                                 <tr>
                                     <th style="width:60px">No</th>
-                                    <th>Barang</th>
-                                    <th>Kondisi</th>
+                                    <th class="text-start">Nama Barang</th>
+                                    <th>Bahan</th>
+                                    <th>Asal</th>
                                     <th>Jumlah</th>
                                     <th>Harga Satuan</th>
                                     <th>Total</th>
                                     <th class="d-none d-md-table-cell">Tahun</th>
+                                    <th class="d-none d-md-table-cell">Kategori</th>
                                     <th>Aksi</th>
                                 </tr>
                             </thead>
@@ -259,37 +283,20 @@ $kondisi_labels = [
                                 <?php $no = ($offset ?? 0) + 1; ?>
                                 <?php foreach ($transaksi_list as $t): ?>
                                     <tr>
-                                        <td><?= $no++ ?></td>
-                                        <td class="text-start">
-                                            <div class="d-flex align-items-center">
-                                                <?php if (!empty($t['foto'])): ?>
-                                                    <img src="../../uploads/<?= htmlspecialchars($t['foto']) ?>" alt="<?= htmlspecialchars($t['nama_barang']) ?>" class="rounded me-2" style="width:48px;height:48px;object-fit:cover;">
-                                                <?php else: ?>
-                                                    <div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" style="width:48px;height:48px;"><i class="fas fa-box text-muted"></i></div>
-                                                <?php endif; ?>
-                                                <div class="text-start">
-                                                    <div class="fw-semibold"><?= htmlspecialchars($t['nama_barang'] ?? '-') ?></div>
-                                                    <small class="text-muted d-none d-md-inline"><?= htmlspecialchars(mb_strimwidth($t['deskripsi'] ?? '-', 0, 80, '...')) ?></small>
-                                                    <div class="d-md-none"><small class="text-muted"><?= htmlspecialchars($t['nama_kategori'] ?? '-') ?></small></div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td><?= htmlspecialchars($kondisi_labels[$t['kondisi']] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars((int)$t['jumlah']) ?></td>
-                                        <td>Rp <?= number_format((float)$t['harga_satuan'], 2, ',', '.') ?></td>
-                                        <td>Rp <?= number_format((float)$t['total'], 2, ',', '.') ?></td>
-                                        <td class="d-none d-md-table-cell"><?= htmlspecialchars($t['tahun_pengadaan'] ?? '-') ?></td>
-                                        <td>
+                                        <td class="text-center"><?= $no++ ?></td>
+                                        <td><?= htmlspecialchars($t['nama_barang'] ?? '-') ?></td>
+                                        <td class="text-center"><?= htmlspecialchars($t['bahan'] ?? '-') ?></td>
+                                        <td class="text-center"><?= htmlspecialchars($t['asal'] ?? '-') ?></td>
+                                        <td class="text-center"><?= (int)($t['jumlah'] ?? 0) ?></td>
+                                        <td class="text-end">Rp <?= number_format((float)($t['harga_satuan'] ?? 0), 2, ',', '.') ?></td>
+                                        <td class="text-end">Rp <?= number_format((float)($t['total'] ?? 0), 2, ',', '.') ?></td>
+                                        <td class="text-center d-none d-md-table-cell"><?= htmlspecialchars($t['tahun_pengadaan'] ?? '-') ?></td>
+                                        <td class="text-center d-none d-md-table-cell"><?= htmlspecialchars($t['nama_kategori'] ?? '-') ?></td>
+                                        <td class="text-center">
                                             <div class="btn-group" role="group">
-                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="showDetail(<?= $t['id'] ?>)">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <a href="?action=edit&id=<?= $t['id'] ?>" class="btn btn-sm btn-outline-warning">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="showDeleteModal(<?= $t['id'] ?>, '<?= htmlspecialchars(addslashes($t['nama_barang'] ?? 'Transaksi')) ?>')">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="showDetail(<?= $t['id'] ?>)"><i class="fas fa-eye"></i></button>
+                                                <a href="?action=edit&id=<?= $t['id'] ?>" class="btn btn-sm btn-outline-warning"><i class="fas fa-edit"></i></a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="showDeleteModal(<?= $t['id'] ?>, '<?= htmlspecialchars(addslashes($t['nama_barang'] ?? 'Transaksi')) ?>')"><i class="fas fa-trash"></i></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -303,19 +310,20 @@ $kondisi_labels = [
                         <nav aria-label="Page navigation" class="mt-3">
                             <ul class="pagination justify-content-center">
                                 <?php if ($page > 1): ?>
-                                    <li class="page-item"><a class="page-link" href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&barang=<?= $barang_filter ?>"><i class="fas fa-chevron-left"></i></a></li>
+                                    <li class="page-item"><a class="page-link" href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&kategori=<?= $kategori_filter ?>"><i class="fas fa-chevron-left"></i></a></li>
                                 <?php endif; ?>
 
                                 <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
-                                    <li class="page-item <?= $i == $page ? 'active' : '' ?>"><a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&barang=<?= $barang_filter ?>"><?= $i ?></a></li>
+                                    <li class="page-item <?= $i == $page ? 'active' : '' ?>"><a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&kategori=<?= $kategori_filter ?>"><?= $i ?></a></li>
                                 <?php endfor; ?>
 
                                 <?php if ($page < $total_pages): ?>
-                                    <li class="page-item"><a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&barang=<?= $barang_filter ?>"><i class="fas fa-chevron-right"></i></a></li>
+                                    <li class="page-item"><a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&kategori=<?= $kategori_filter ?>"><i class="fas fa-chevron-right"></i></a></li>
                                 <?php endif; ?>
                             </ul>
                         </nav>
                     <?php endif; ?>
+
                 <?php endif; ?>
             </div>
         </div>
@@ -344,7 +352,7 @@ $kondisi_labels = [
     </div>
 </div>
 
-<!-- Delete Confirm Modal -->
+<!-- Delete Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -364,12 +372,6 @@ $kondisi_labels = [
 </div>
 
 <script>
-    const kondisiMap = {
-        'baik': 'Baik',
-        'rusak_ringan': 'Rusak Ringan',
-        'rusak_berat': 'Rusak Berat'
-    };
-
     function showDetail(id) {
         const modalEl = document.getElementById('detailModal');
         const modal = new bootstrap.Modal(modalEl);
@@ -383,16 +385,15 @@ $kondisi_labels = [
                     document.getElementById('detailModalBody').innerHTML = `<div class="text-center py-4"><i class="fas fa-exclamation-triangle fa-3x text-warning"></i><p class="mt-2">${data.error}</p></div>`;
                     return;
                 }
-                const foto = data.foto ? `<img src="../../uploads/${data.foto}" class="img-fluid rounded" style="max-height:220px;object-fit:cover;">` :
-                    `<div class="text-center py-4"><i class="fas fa-box-open fa-4x text-secondary"></i><div class="text-muted">Tidak ada foto</div></div>`;
+
                 document.getElementById('detailModalBody').innerHTML = `
                 <div class="row">
-                    <div class="col-md-4 text-center">${foto}</div>
-                    <div class="col-md-8">
+                    <div class="col-12">
                         <h5 class="fw-bold">${data.nama_barang || '-'}</h5>
                         <p class="mb-1"><strong>Kategori:</strong> ${data.nama_kategori || '-'}</p>
-                        <p class="mb-1"><strong>Kondisi:</strong> ${kondisiMap[data.kondisi] || '-'}</p>
-                        <p class="mb-1"><strong>Jumlah:</strong> ${data.jumlah || 0}</p>
+                        <p class="mb-1"><strong>Bahan:</strong> ${data.bahan || '-'}</p>
+                        <p class="mb-1"><strong>Asal:</strong> ${data.asal || '-'}</p>
+                        <p class="mb-1"><strong>Jumlah:</strong> ${Number(data.jumlah || 0)}</p>
                         <p class="mb-1"><strong>Harga Satuan:</strong> Rp ${Number(data.harga_satuan || 0).toLocaleString('id-ID', {minimumFractionDigits:2})}</p>
                         <p class="mb-1"><strong>Total:</strong> Rp ${Number(data.total || 0).toLocaleString('id-ID', {minimumFractionDigits:2})}</p>
                         <p class="mb-1"><strong>Tahun Pengadaan:</strong> ${data.tahun_pengadaan || '-'}</p>

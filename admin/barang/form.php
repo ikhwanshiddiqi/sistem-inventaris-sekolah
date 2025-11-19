@@ -8,6 +8,7 @@
 // Simple upload function
 function uploadFileSimple($file, $destination)
 {
+    // ...existing code...
     if (!isset($file['error']) || is_array($file['error'])) {
         return false;
     }
@@ -17,7 +18,7 @@ function uploadFileSimple($file, $destination)
     }
 
     $fileInfo = pathinfo($file['name']);
-    $extension = strtolower($fileInfo['extension']);
+    $extension = strtolower($fileInfo['extension'] ?? '');
     $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
 
     if (!in_array($extension, $allowedTypes)) {
@@ -25,7 +26,7 @@ function uploadFileSimple($file, $destination)
     }
 
     $filename = uniqid() . '.' . $extension;
-    $filepath = $destination . '/' . $filename;
+    $filepath = rtrim($destination, '/\\') . '/' . $filename;
 
     if (!move_uploaded_file($file['tmp_name'], $filepath)) {
         return false;
@@ -58,24 +59,31 @@ try {
 
         if (!$barang) {
             $error = 'Barang tidak ditemukan!';
-            // Use JavaScript redirect instead of PHP header
             echo "<script>alert('Barang tidak ditemukan!'); window.location.href='index.php';</script>";
             exit();
         }
     }
 } catch (Exception $e) {
     $kategori_list = [];
+    error_log("[admin/barang/form.php] DB error: " . $e->getMessage());
 }
 
 // Proses form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nama_barang = trim($_POST['nama_barang']);
-    $deskripsi = trim($_POST['deskripsi']);
-    $kategori_id = (int)$_POST['kategori_id'];
+    $nama_barang = trim($_POST['nama_barang'] ?? '');
+    $deskripsi = trim($_POST['deskripsi'] ?? '');
+    $kategori_id = (int)($_POST['kategori_id'] ?? 0);
+
+    // jumlah kolom baru sesuai tabel
+    $jumlah_baik = max(0, (int)($_POST['jumlah_baik'] ?? 0));
+    $jumlah_sedang = max(0, (int)($_POST['jumlah_sedang'] ?? 0));
+    $jumlah_rusak = max(0, (int)($_POST['jumlah_rusak'] ?? 0));
 
     // Validasi
     if (empty($nama_barang)) {
         $error = 'Nama barang harus diisi!';
+    } elseif ($kategori_id <= 0) {
+        $error = 'Silakan pilih kategori!';
     } else {
         try {
             if ($action == 'add') {
@@ -95,25 +103,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if (!$error) {
                     $stmt = $pdo->prepare("
-                        INSERT INTO barang (nama_barang, deskripsi, kategori_id, 
-                                          foto)
-                        VALUES (?, ?, ?, ?)
+                        INSERT INTO barang (nama_barang, deskripsi, kategori_id, foto, jumlah_baik, jumlah_sedang, jumlah_rusak)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
                     ");
                     $stmt->execute([
                         $nama_barang,
                         $deskripsi,
                         $kategori_id,
                         $foto,
+                        $jumlah_baik,
+                        $jumlah_sedang,
+                        $jumlah_rusak
                     ]);
 
                     $barang_id = $pdo->lastInsertId();
                     $success = 'Barang berhasil ditambahkan!';
-                    echo "<script>alert('Barang berhasil ditambahkan!'); window.location.href='index.php';</script>";
+                    echo "<script>localStorage.removeItem('barangFormData'); alert('Barang berhasil ditambahkan!'); window.location.href='index.php';</script>";
                     exit();
                 }
             } else {
                 // Update barang
-                $foto = $barang['foto']; // Keep existing foto
+                $foto = $barang['foto'] ?? null;
                 $upload_dir = '../../uploads/';
 
                 if (isset($_POST['hapus_foto']) && $_POST['hapus_foto'] == '1') {
@@ -133,8 +143,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $stmt = $pdo->prepare("
                     UPDATE barang SET 
-                        nama_barang = ?, deskripsi = ?, kategori_id = ?,
-                        foto = ?
+                        nama_barang = ?, deskripsi = ?, kategori_id = ?, foto = ?,
+                        jumlah_baik = ?, jumlah_sedang = ?, jumlah_rusak = ?
                     WHERE id = ?
                 ");
                 $stmt->execute([
@@ -142,25 +152,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $deskripsi,
                     $kategori_id,
                     $foto,
+                    $jumlah_baik,
+                    $jumlah_sedang,
+                    $jumlah_rusak,
                     $barang_id
                 ]);
 
                 $success = 'Barang berhasil diupdate!';
-                echo "<script>alert('Barang berhasil diupdate!'); window.location.href='index.php';</script>";
+                echo "<script>localStorage.removeItem('barangFormData'); alert('Barang berhasil diupdate!'); window.location.href='index.php';</script>";
                 exit();
             }
         } catch (Exception $e) {
             $error = 'Terjadi kesalahan sistem!';
-            // Log detail error untuk debugging
             error_log("[admin/barang/form.php] ERROR: " . $e->getMessage());
             if (isset($_GET['debug'])) {
                 $error = 'Terjadi kesalahan sistem: ' . htmlspecialchars($e->getMessage());
-            } else {
-                $error = 'Terjadi kesalahan sistem!';
             }
         }
     }
 }
+
+// ...existing code for header HTML...
+
 ?>
 
 <!-- Header Section -->
@@ -207,8 +220,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
 
                 <form method="POST" action="" enctype="multipart/form-data" id="barangForm">
-
-
                     <div class="row">
                         <div class="col-md-8">
                             <!-- Basic Information -->
@@ -235,12 +246,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </select>
                                 </div>
                             </div>
+
                             <div class="mb-3">
                                 <label for="deskripsi" class="form-label">
                                     <i class="fas fa-align-left me-1"></i>Deskripsi
                                 </label>
                                 <textarea class="form-control" id="deskripsi" name="deskripsi" rows="3"
                                     placeholder="Deskripsi detail barang..."><?= htmlspecialchars($barang['deskripsi'] ?? '') ?></textarea>
+                            </div>
+
+                            <!-- Jumlah kondisi (denormalized) -->
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="jumlah_baik" class="form-label">Jumlah Baik</label>
+                                    <input type="number" class="form-control" id="jumlah_baik" name="jumlah_baik" min="0"
+                                        value="<?= htmlspecialchars($barang['jumlah_baik'] ?? 0) ?>">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="jumlah_sedang" class="form-label">Jumlah Sedang</label>
+                                    <input type="number" class="form-control" id="jumlah_sedang" name="jumlah_sedang" min="0"
+                                        value="<?= htmlspecialchars($barang['jumlah_sedang'] ?? 0) ?>">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="jumlah_rusak" class="form-label">Jumlah Rusak</label>
+                                    <input type="number" class="form-control" id="jumlah_rusak" name="jumlah_rusak" min="0"
+                                        value="<?= htmlspecialchars($barang['jumlah_rusak'] ?? 0) ?>">
+                                </div>
                             </div>
                         </div>
 
@@ -252,7 +283,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </label>
                                 <div class="upload-area" id="uploadArea">
                                     <?php if (isset($barang['foto']) && $barang['foto']): ?>
-                                        <img src="../../uploads/<?= $barang['foto'] ?>" id="previewImage"
+                                        <img src="../../uploads/<?= htmlspecialchars($barang['foto']) ?>" id="previewImage"
                                             class="img-fluid rounded" style="max-height: 200px;">
                                     <?php else: ?>
                                         <div class="upload-placeholder" id="uploadPlaceholder">
@@ -380,11 +411,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const previewImage = document.getElementById('previewImage');
     const uploadPlaceholder = document.getElementById('uploadPlaceholder');
 
-    uploadArea.addEventListener('click', function() {
+    uploadArea && uploadArea.addEventListener('click', function() {
         fotoInput.click();
     });
 
-    fotoInput.addEventListener('change', function() {
+    fotoInput && fotoInput.addEventListener('change', function() {
         const file = this.files[0];
         if (file) {
             const reader = new FileReader();
@@ -398,7 +429,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     img.style.maxHeight = '200px';
                     img.id = 'previewImage';
 
-                    uploadPlaceholder.style.display = 'none';
+                    if (uploadPlaceholder) uploadPlaceholder.style.display = 'none';
                     uploadArea.appendChild(img);
                 }
             };
@@ -410,22 +441,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const hapusFotoCheckbox = document.getElementById('hapus_foto');
     if (hapusFotoCheckbox) {
         hapusFotoCheckbox.addEventListener('change', function() {
-            const fotoInput = document.getElementById('foto');
-            const uploadArea = document.getElementById('uploadArea');
+            const fotoInputEl = document.getElementById('foto');
+            const uploadAreaEl = document.getElementById('uploadArea');
 
             if (this.checked) {
-                // Disable file input and show message
-                fotoInput.disabled = true;
-                uploadArea.innerHTML = `
+                fotoInputEl.disabled = true;
+                uploadAreaEl.innerHTML = `
                 <div class="upload-placeholder text-danger">
                     <i class="fas fa-trash fa-3x mb-3"></i>
                     <p class="mb-0">Foto akan dihapus saat disimpan</p>
                 </div>
             `;
             } else {
-                // Re-enable file input and restore original
-                fotoInput.disabled = false;
-                location.reload(); // Simple way to restore original state
+                fotoInputEl.disabled = false;
+                location.reload();
             }
         });
     }

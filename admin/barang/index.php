@@ -73,42 +73,12 @@ require_once '../includes/header.php';
             font-size: 0.75rem;
         }
     }
-
-    @media (max-width: 576px) {
-        .table-responsive {
-            font-size: 0.75rem;
-        }
-
-        .table td,
-        .table th {
-            padding: 0.4rem 0.2rem;
-        }
-
-        .btn-group .btn {
-            padding: 0.15rem 0.3rem;
-            font-size: 0.65rem;
-        }
-
-        .badge {
-            font-size: 0.65rem;
-            padding: 0.2rem 0.4rem;
-        }
-
-        .fw-semibold {
-            font-size: 0.85rem;
-        }
-
-        .text-muted {
-            font-size: 0.7rem;
-        }
-    }
 </style>
 
 <?php
 
 // Handle actions
 if ($action == 'add' || $action == 'edit') {
-    // Include form langsung
     include 'form.php';
     exit();
 }
@@ -125,25 +95,20 @@ if ($action == 'delete' && isset($_GET['id'])) {
         $barang = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($barang) {
-            // Hapus foto jika ada
             if ($barang['foto'] && file_exists('../../uploads/' . $barang['foto'])) {
                 unlink('../../uploads/' . $barang['foto']);
             }
 
-            // Hapus barang
             $stmt = $pdo->prepare("DELETE FROM barang WHERE id = ?");
             $stmt->execute([$barang_id]);
 
-            $success = 'Barang berhasil dihapus!';
             echo "<script>alert('Barang berhasil dihapus!'); window.location.href='index.php';</script>";
             exit();
         } else {
-            $error = 'Barang tidak ditemukan!';
             echo "<script>alert('Barang tidak ditemukan!'); window.location.href='index.php';</script>";
             exit();
         }
     } catch (Exception $e) {
-        $error = 'Gagal menghapus barang!';
         echo "<script>alert('Gagal menghapus barang!'); window.location.href='index.php';</script>";
         exit();
     }
@@ -160,37 +125,35 @@ try {
     $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Query untuk data barang
+    // build where (gunakan named params supaya binding lebih aman)
     $where_conditions = [];
     $params = [];
 
     if (!empty($search)) {
-        $where_conditions[] = "(b.nama_barang LIKE ? OR b.deskripsi LIKE ?)";
-        $search_param = "%$search%";
-        $params[] = $search_param;
-        $params[] = $search_param;
+        $where_conditions[] = "(b.nama_barang LIKE :search OR b.deskripsi LIKE :search)";
+        $params[':search'] = "%{$search}%";
     }
 
     if (!empty($kategori_filter)) {
-        $where_conditions[] = "b.kategori_id = ?";
-        $params[] = $kategori_filter;
+        $where_conditions[] = "b.kategori_id = :kategori";
+        $params[':kategori'] = $kategori_filter;
     }
 
     $where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
 
-    // Query untuk total data
+    // total count
     $count_query = "
-        SELECT COUNT(*) as total 
-        FROM barang b 
+        SELECT COUNT(*) as total
+        FROM barang b
         LEFT JOIN kategori k ON b.kategori_id = k.id
         $where_clause
     ";
     $stmt = $pdo->prepare($count_query);
     $stmt->execute($params);
-    $total_records = $stmt->fetch()['total'];
-    $total_pages = ceil($total_records / $limit);
+    $total_records = (int)$stmt->fetchColumn();
+    $total_pages = $total_records ? ceil($total_records / $limit) : 0;
 
-    // Query untuk data barang
+    // fetch list
     $query = "
         SELECT 
             b.*,
@@ -199,21 +162,32 @@ try {
         LEFT JOIN kategori k ON b.kategori_id = k.id
         $where_clause
         ORDER BY b.created_at DESC
-        LIMIT $limit OFFSET $offset
+        LIMIT :limit OFFSET :offset
     ";
     $stmt = $pdo->prepare($query);
-    $stmt->execute($params);
-    $barang_list = $stmt->fetchAll();
 
-    // Ambil data untuk filter
-    $kategori_list = $pdo->query("SELECT * FROM kategori ORDER BY nama_kategori")->fetchAll();
+    // bind named params (search/kategori)
+    foreach ($params as $key => $val) {
+        $stmt->bindValue($key, $val);
+    }
+
+    // bind limit/offset sebagai integer
+    $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+
+    $stmt->execute();
+    $barang_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Ambil kategori untuk filter
+    $kategori_list = $pdo->query("SELECT * FROM kategori ORDER BY nama_kategori")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
+    error_log("[admin/barang/index.php] " . $e->getMessage());
     $barang_list = [];
     $total_pages = 0;
     $kategori_list = [];
+    $total_records = 0;
 }
 
-// Flash message
 $flash = getFlashMessage();
 ?>
 
@@ -297,19 +271,9 @@ $flash = getFlashMessage();
                     <div class="col-md-6 col-12 mb-2 mb-md-0">
                         <h5 class="mb-0">
                             <i class="fas fa-list me-2"></i>Daftar Barang
-                            <span class="badge bg-primary ms-2"><?= number_format($total_records) ?> item</span>
+                            <span class="badge bg-primary ms-2"><?= number_format($total_records ?? 0) ?> item</span>
                         </h5>
                     </div>
-                    <!-- <div class="col-md-6 col-12 text-md-end">
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportData('excel')">
-                                <i class="fas fa-file-excel me-1"></i><span class="d-none d-md-inline">Excel</span>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportData('pdf')">
-                                <i class="fas fa-file-pdf me-1"></i><span class="d-none d-md-inline">PDF</span>
-                            </button>
-                        </div>
-                    </div> -->
                 </div>
             </div>
             <div class="card-body">
@@ -330,17 +294,27 @@ $flash = getFlashMessage();
                                     <th style="width:60px">No</th>
                                     <th>Nama Barang</th>
                                     <th class="d-none d-md-table-cell">Kategori</th>
+                                    <th class="text-center">Baik</th>
+                                    <th class="text-center">Sedang</th>
+                                    <th class="text-center">Rusak</th>
+                                    <th class="text-center d-none d-md-table-cell">Total</th>
                                     <th>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php $no = ($offset ?? 0) + 1; ?>
                                 <?php foreach ($barang_list as $barang): ?>
+                                    <?php
+                                    $baik = (int)($barang['jumlah_baik'] ?? 0);
+                                    $sedang = (int)($barang['jumlah_sedang'] ?? 0);
+                                    $rusak = (int)($barang['jumlah_rusak'] ?? 0);
+                                    $total_jml = $baik + $sedang + $rusak;
+                                    ?>
                                     <tr>
                                         <td><?php echo $no++; ?></td>
                                         <td>
                                             <div class="d-flex align-items-center ">
-                                                <?php if ($barang['foto']): ?>
+                                                <?php if (!empty($barang['foto'])): ?>
                                                     <div class="me-2">
                                                         <img src="../../uploads/<?= htmlspecialchars($barang['foto']) ?>"
                                                             alt="<?= htmlspecialchars($barang['nama_barang']) ?>"
@@ -364,6 +338,10 @@ $flash = getFlashMessage();
                                         <td class="d-none d-md-table-cell">
                                             <span class="badge bg-info"><?= htmlspecialchars($barang['nama_kategori']) ?></span>
                                         </td>
+                                        <td class="text-center"><?= $baik ?></td>
+                                        <td class="text-center"><?= $sedang ?></td>
+                                        <td class="text-center"><?= $rusak ?></td>
+                                        <td class="text-center d-none d-md-table-cell"><?= $total_jml ?></td>
                                         <td>
                                             <div class="btn-group" role="group">
                                                 <button type="button" onclick="showDetail(<?= $barang['id'] ?>)"
@@ -473,9 +451,7 @@ $flash = getFlashMessage();
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <strong>Peringatan:</strong> Tindakan ini tidak dapat dibatalkan dan foto barang juga akan dihapus secara permanen.
                 </div>
-                <div id="deleteItemInfo" class="text-center">
-                    <!-- Info barang yang akan dihapus akan ditampilkan di sini -->
-                </div>
+                <div id="deleteItemInfo" class="text-center"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -490,142 +466,76 @@ $flash = getFlashMessage();
 </div>
 
 <script>
-    // Export data function
-    function exportData(type) {
-        const search = document.getElementById('search').value;
-        const kategori = document.getElementById('kategori').value;
-
-        let url = `export_barang.php?type=${type}`;
-        if (search) url += `&search=${encodeURIComponent(search)}`;
-        if (kategori) url += `&kategori=${kategori}`;
-
-        window.open(url, '_blank');
-    }
-
     // Auto-submit form on filter change
     document.getElementById('kategori').addEventListener('change', function() {
         this.form.submit();
     });
 
-    // Detail popup function
+    // Detail popup function (menampilkan jumlah per kondisi)
     function showDetail(id) {
-        // Show modal
         const modal = new bootstrap.Modal(document.getElementById('detailModal'));
         modal.show();
-
-        // Show loading
         document.getElementById('detailModalBody').innerHTML = `
-        <div class="text-center py-4">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2">Memuat detail barang...</p>
-        </div>
-    `;
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Memuat detail barang...</p>
+            </div>`;
 
-        // Fetch data
         fetch(`?action=get_detail&id=${id}`)
-            .then(response => response.json())
+            .then(res => res.json())
             .then(data => {
                 if (data.error) {
-                    document.getElementById('detailModalBody').innerHTML = `
-                    <div class="text-center py-4">
-                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                        <h5>Error</h5>
-                        <p class="text-muted">${data.error}</p>
-                    </div>
-                `;
-                } else {
-                    // Format data
-                    const barang = data;
-                    let fotoHtml;
-                    if (barang.foto) {
-                        fotoHtml = `<img src="../../uploads/${barang.foto}" alt="${barang.nama_barang}" class="img-fluid rounded" style="max-height: 300px; object-fit: cover;">`;
-                    } else {
-                        fotoHtml = `<div class='d-flex flex-column align-items-center justify-content-center' style='height:200px;'>
-                        <i class='fas fa-box-open fa-5x text-secondary mb-2'></i>
-                        <div class='text-muted'>Tidak ada foto</div>
-                    </div>`;
-                    }
-
-                    document.getElementById('detailModalBody').innerHTML = `
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="text-center mb-3">
-                                ${fotoHtml}
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="row">
-                                <div class="col-md-6">                                    
-                                    <h6 class="text-muted mb-1">Nama Barang</h6>
-                                    <p class="fw-bold mb-3">${barang.nama_barang}</p>
-                                    
-                                    <h6 class="text-muted mb-1">Kategori</h6>
-                                    <p class="fw-bold mb-3">${barang.nama_kategori || '-'}</p>
-                                    
-                                </div>
-                                <div class="col-md-6">                                    
-                                    <h6 class="text-muted mb-1">Tanggal Input</h6>
-                                    <p class="fw-bold mb-3">${new Date(barang.created_at).toLocaleDateString('id-ID')}</p>
-                                </div>
-                            </div>
-                            
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <h6 class="text-muted mb-1">Deskripsi</h6>
-                                    <p class="mb-0">${barang.deskripsi || 'Tidak ada deskripsi'}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                    // Show edit button
-                    document.getElementById('editBarangBtn').style.display = 'inline-block';
-                    document.getElementById('editBarangBtn').onclick = function() {
-                        window.location.href = `?action=edit&id=${barang.id}`;
-                    };
+                    document.getElementById('detailModalBody').innerHTML = `<div class="text-center py-4"><i class="fas fa-exclamation-triangle fa-3x text-warning"></i><p class="mt-2">${data.error}</p></div>`;
+                    return;
                 }
-            })
-            .catch(error => {
+                const foto = data.foto ? `<img src="../../uploads/${data.foto}" class="img-fluid rounded" style="max-height:300px;object-fit:cover;">` :
+                    `<div class='d-flex flex-column align-items-center justify-content-center' style='height:200px;'><i class='fas fa-box-open fa-5x text-secondary mb-2'></i><div class='text-muted'>Tidak ada foto</div></div>`;
+
+                const baik = Number(data.jumlah_baik || 0);
+                const sedang = Number(data.jumlah_sedang || 0);
+                const rusak = Number(data.jumlah_rusak || 0);
+                const total = baik + sedang + rusak;
+
                 document.getElementById('detailModalBody').innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                    <h5>Error</h5>
-                    <p class="text-muted">Terjadi kesalahan saat memuat data</p>
-                </div>
-            `;
+                    <div class="row">
+                        <div class="col-md-4 text-center">${foto}</div>
+                        <div class="col-md-8">
+                            <h5 class="fw-bold">${data.nama_barang || '-'}</h5>
+                            <p class="mb-1"><strong>Kategori:</strong> ${data.nama_kategori || '-'}</p>
+                            <div class="row mb-2">
+                                <div class="col-4"><strong>Baik</strong><div>${baik}</div></div>
+                                <div class="col-4"><strong>Sedang</strong><div>${sedang}</div></div>
+                                <div class="col-4"><strong>Rusak</strong><div>${rusak}</div></div>
+                            </div>
+                            <p class="mb-1"><strong>Total:</strong> ${total}</p>
+                            <hr>
+                            <h6 class="text-muted">Deskripsi</h6>
+                            <p>${data.deskripsi || '-'}</p>
+                        </div>
+                    </div>
+                `;
+                const editBtn = document.getElementById('editBarangBtn');
+                editBtn.style.display = 'inline-block';
+                editBtn.onclick = () => {
+                    window.location.href = `?action=edit&id=${data.id}`;
+                };
+            })
+            .catch(() => {
+                document.getElementById('detailModalBody').innerHTML = `<div class="text-center py-4"><i class="fas fa-exclamation-triangle fa-3x text-danger"></i><p class="mt-2">Terjadi kesalahan saat memuat data</p></div>`;
             });
     }
 
-    // Reset modal when closed
-    document.getElementById('detailModal').addEventListener('hidden.bs.modal', function() {
-        document.getElementById('editBarangBtn').style.display = 'none';
-    });
-
-    // Show delete confirmation modal
     function showDeleteModal(id, namaBarang) {
-        // Set info barang yang akan dihapus
         document.getElementById('deleteItemInfo').innerHTML = `
         <div class="card border-danger">
             <div class="card-body">
-                <h6 class="card-title text-danger">
-                    <i class="fas fa-box me-2"></i>${namaBarang}
-                </h6>
-                <p class="card-text mb-0">
-                    <strong>ID:</strong> <span class="text-muted">#${id}</span>
-                </p>
+                <h6 class="card-title text-danger"><i class="fas fa-box me-2"></i>${namaBarang}</h6>
+                <p class="card-text mb-0"><strong>ID:</strong> <span class="text-muted">#${id}</span></p>
             </div>
-        </div>
-    `;
-
-        // Set delete URL for confirm button
+        </div>`;
         document.getElementById('confirmDeleteBtn').onclick = function() {
             window.location.href = `?action=delete&id=${id}`;
         };
-
-        // Show modal
         const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
         deleteModal.show();
     }
