@@ -19,10 +19,10 @@ try {
     $stmt = $pdo->query("SELECT COUNT(*) as total_kategori FROM kategori");
     $total_kategori = $stmt->fetchColumn();
 
-    $stmt = $pdo->query("SELECT COUNT(*) as barang_rusak FROM barang WHERE kondisi IN ('rusak_ringan', 'rusak_berat')");
+    $stmt = $pdo->query("SELECT COUNT(*) as barang_rusak FROM transaksi WHERE kondisi IN ('rusak_ringan', 'rusak_berat')");
     $barang_rusak = $stmt->fetchColumn();
 
-    $stmt = $pdo->query("SELECT COUNT(*) as barang_baik FROM barang WHERE kondisi IN ('baik')");
+    $stmt = $pdo->query("SELECT COUNT(*) as barang_baik FROM transaksi WHERE kondisi IN ('baik')");
     $barang_baik = $stmt->fetchColumn();
 
     $stats = [

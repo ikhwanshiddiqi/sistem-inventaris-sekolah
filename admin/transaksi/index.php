@@ -39,7 +39,7 @@ if ($action == 'get_detail' && isset($_GET['id'])) {
     exit();
 }
 
-$page_title = 'Data Barang';
+$page_title = 'Data Transaksi';
 require_once '../includes/header.php';
 ?>
 
@@ -324,7 +324,7 @@ $flash = getFlashMessage();
                     </div>
                 <?php else: ?>
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover text-center">
                             <thead class="table-light">
                                 <tr>
                                     <th style="width:60px">No</th>
@@ -339,7 +339,7 @@ $flash = getFlashMessage();
                                     <tr>
                                         <td><?php echo $no++; ?></td>
                                         <td>
-                                            <div class="d-flex align-items-center ">
+                                            <div class="d-flex align-items-center justify-content-center">
                                                 <?php if ($barang['foto']): ?>
                                                     <div class="me-2">
                                                         <img src="../../uploads/<?= htmlspecialchars($barang['foto']) ?>"
