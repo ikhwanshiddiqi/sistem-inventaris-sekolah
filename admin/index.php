@@ -19,8 +19,8 @@ $module = $_GET['module'] ?? '';
 // Mapping modul ke folder
 $module_folders = [
     'kategori' => 'kategori',
-    'lokasi' => 'lokasi', 
-    'peminjaman' => 'peminjaman',
+    'lokasi' => 'lokasi',
+    'transaksi' => 'transaksi',
     'user' => 'user',
     'laporan' => 'laporan',
     'pengaturan' => 'pengaturan',
@@ -40,4 +40,4 @@ if ($module && isset($module_folders[$module]) && ($action == 'add' || $action =
 
 // Include dashboard langsung
 include 'dashboard.php';
-?> 
+?>

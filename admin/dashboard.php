@@ -19,17 +19,17 @@ try {
     $stmt = $pdo->query("SELECT COUNT(*) as total_kategori FROM kategori");
     $total_kategori = $stmt->fetchColumn();
 
-    $stmt = $pdo->query("SELECT COUNT(*) as barang_rusak FROM transaksi WHERE kondisi IN ('rusak_ringan', 'rusak_berat')");
-    $barang_rusak = $stmt->fetchColumn();
+    $stmt = $pdo->query("SELECT COUNT(*) as total_transaksi FROM transaksi");
+    $total_transaksi = $stmt->fetchColumn();
 
-    $stmt = $pdo->query("SELECT COUNT(*) as barang_baik FROM transaksi WHERE kondisi IN ('baik')");
-    $barang_baik = $stmt->fetchColumn();
+    $stmt = $pdo->query("SELECT COUNT(*) as total_user FROM users");
+    $total_user = $stmt->fetchColumn();
 
     $stats = [
         'total_barang' => $total_barang,
         'total_kategori' => $total_kategori,
-        'barang_rusak' => $barang_rusak,
-        'barang_baik' => $barang_baik
+        'total_transaksi' => $total_transaksi,
+        'total_user' => $total_user
     ];
 
     // Data barang per kategori
@@ -80,7 +80,7 @@ try {
             </div>
             <div class="stat-content">
                 <div class="stat-number"><?= number_format($stats['total_barang']) ?></div>
-                <div class="stat-label">Total Barang</div>
+                <div class="stat-label">Jenis Barang</div>
             </div>
         </div>
     </div>
@@ -103,8 +103,8 @@ try {
                 <i class="fas fa-check"></i>
             </div>
             <div class="stat-content">
-                <div class="stat-number"><?= number_format($stats['barang_baik']) ?></div>
-                <div class="stat-label">Barang Baik</div>
+                <div class="stat-number"><?= number_format($stats['total_transaksi']) ?></div>
+                <div class="stat-label">Total Transaksi</div>
             </div>
         </div>
     </div>
@@ -115,8 +115,8 @@ try {
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
             <div class="stat-content">
-                <div class="stat-number"><?= number_format($stats['barang_rusak']) ?></div>
-                <div class="stat-label">Barang Rusak</div>
+                <div class="stat-number"><?= number_format($stats['total_user']) ?></div>
+                <div class="stat-label">Total User</div>
             </div>
         </div>
     </div>
@@ -185,11 +185,11 @@ try {
                 data: <?= json_encode(array_column($kategori_chart, 'total_barang')) ?>,
                 backgroundColor: [
                     '#4f46e5',
-                    '#7c3aed',
+                    '#3ae7edff',
                     '#10b981',
                     '#f59e0b',
                     '#ef4444',
-                    '#8b5cf6'
+                    '#9e8c93ff'
                 ],
                 borderWidth: 0,
                 hoverOffset: 4
