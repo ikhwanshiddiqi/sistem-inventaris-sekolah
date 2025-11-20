@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Edit Pengaturan Sistem
  */
@@ -11,13 +12,13 @@ require_once '../includes/header.php';
 try {
     $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
+
     $stmt = $pdo->query("SELECT * FROM pengaturan");
     $settings = [];
-    while($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $settings[$row['nama_pengaturan']] = $row['nilai'];
     }
-} catch(Exception $e) {
+} catch (Exception $e) {
     $settings = [];
 }
 ?>
@@ -55,8 +56,8 @@ try {
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Nama Sekolah</label>
-                                <input type="text" class="form-control" name="nama_sekolah" 
-                                       value="<?= htmlspecialchars($settings['nama_sekolah'] ?? '') ?>" required>
+                                <input type="text" class="form-control" name="nama_sekolah"
+                                    value="<?= htmlspecialchars($settings['nama_sekolah'] ?? '') ?>" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Alamat Sekolah</label>
@@ -66,34 +67,13 @@ try {
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Telepon Sekolah</label>
-                                <input type="text" class="form-control" name="telepon_sekolah" 
-                                       value="<?= htmlspecialchars($settings['telepon_sekolah'] ?? '') ?>" required>
+                                <input type="text" class="form-control" name="telepon_sekolah"
+                                    value="<?= htmlspecialchars($settings['telepon_sekolah'] ?? '') ?>" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Email Sekolah</label>
-                                <input type="email" class="form-control" name="email_sekolah" 
-                                       value="<?= htmlspecialchars($settings['email_sekolah'] ?? '') ?>" required>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Pengaturan Peminjaman -->
-                    <h5 class="mb-3">Pengaturan Peminjaman</h5>
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Maksimal Hari Peminjaman</label>
-                                <input type="number" class="form-control" name="maksimal_peminjaman" 
-                                       value="<?= htmlspecialchars($settings['maksimal_peminjaman'] ?? '7') ?>" required>
-                                <small class="text-muted">Jumlah hari maksimal untuk peminjaman barang</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Denda Terlambat (Rp)</label>
-                                <input type="number" class="form-control" name="denda_terlambat" 
-                                       value="<?= htmlspecialchars($settings['denda_terlambat'] ?? '1000') ?>" required>
-                                <small class="text-muted">Denda per hari keterlambatan dalam rupiah</small>
+                                <input type="email" class="form-control" name="email_sekolah"
+                                    value="<?= htmlspecialchars($settings['email_sekolah'] ?? '') ?>" required>
                             </div>
                         </div>
                     </div>

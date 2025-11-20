@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Save Settings
  */
@@ -21,25 +22,22 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 try {
     $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
+
     // Update text settings
     $settings = [
         'nama_sekolah' => $_POST['nama_sekolah'],
         'alamat_sekolah' => $_POST['alamat_sekolah'],
         'telepon_sekolah' => $_POST['telepon_sekolah'],
-        'email_sekolah' => $_POST['email_sekolah'],
-        'maksimal_peminjaman' => $_POST['maksimal_peminjaman'],
-        'denda_terlambat' => $_POST['denda_terlambat']
+        'email_sekolah' => $_POST['email_sekolah']
     ];
-    
-    foreach($settings as $key => $value) {
+
+    foreach ($settings as $key => $value) {
         $stmt = $pdo->prepare("UPDATE pengaturan SET nilai = ? WHERE nama_pengaturan = ?");
         $stmt->execute([$value, $key]);
     }
-    
+
     $success_message = 'Pengaturan berhasil disimpan!';
-    
-} catch(Exception $e) {
+} catch (Exception $e) {
     $error_message = 'Gagal menyimpan pengaturan: ' . $e->getMessage();
 }
 
@@ -47,9 +45,11 @@ try {
 ?>
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Redirecting...</title>
 </head>
+
 <body>
     <script>
         <?php if (isset($success_message)): ?>
@@ -60,6 +60,7 @@ try {
         window.location.href = 'index.php';
     </script>
 </body>
+
 </html>
 <?php
 exit();

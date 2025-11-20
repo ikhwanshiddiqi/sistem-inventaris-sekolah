@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Pengaturan Sistem
  */
@@ -11,13 +12,13 @@ require_once '../includes/header.php';
 try {
     $pdo = new PDO("mysql:host=localhost;dbname=inventaris_sekolah", "root", "");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
+
     $stmt = $pdo->query("SELECT * FROM pengaturan");
     $settings = [];
-    while($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $settings[$row['nama_pengaturan']] = $row['nilai'];
     }
-} catch(Exception $e) {
+} catch (Exception $e) {
     $settings = [];
 }
 ?>
@@ -75,31 +76,6 @@ try {
                                 <h6 class="mb-0">
                                     <i class="fas fa-envelope me-2 text-primary"></i>
                                     <?= htmlspecialchars($settings['email_sekolah'] ?? '-') ?>
-                                </h6>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pengaturan Peminjaman -->
-                <div class="border rounded p-4 bg-light">
-                    <h5 class="mb-4"><i class="fas fa-clock me-2"></i>Pengaturan Peminjaman</h5>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-4">
-                                <label class="text-muted mb-2">Maksimal Hari Peminjaman</label>
-                                <h6 class="mb-0">
-                                    <i class="fas fa-calendar-alt me-2 text-primary"></i>
-                                    <?= htmlspecialchars($settings['maksimal_peminjaman'] ?? '7') ?> hari
-                                </h6>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-4">
-                                <label class="text-muted mb-2">Denda Terlambat</label>
-                                <h6 class="mb-0">
-                                    <i class="fas fa-money-bill me-2 text-primary"></i>
-                                    Rp <?= number_format($settings['denda_terlambat'] ?? 1000) ?> per hari
                                 </h6>
                             </div>
                         </div>
