@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 19, 2025 at 04:13 AM
+-- Generation Time: Nov 20, 2025 at 05:52 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -77,9 +77,12 @@ DELIMITER ;
 CREATE TABLE `barang` (
   `id` int(11) NOT NULL,
   `nama_barang` varchar(200) NOT NULL,
-  `deskripsi` text DEFAULT NULL,
   `kategori_id` int(11) NOT NULL,
+  `deskripsi` longtext DEFAULT NULL,
   `foto` varchar(255) DEFAULT NULL,
+  `jumlah_baik` int(10) UNSIGNED NOT NULL DEFAULT 0,
+  `jumlah_sedang` int(10) UNSIGNED NOT NULL DEFAULT 0,
+  `jumlah_rusak` int(10) UNSIGNED NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -88,9 +91,9 @@ CREATE TABLE `barang` (
 -- Dumping data for table `barang`
 --
 
-INSERT INTO `barang` (`id`, `nama_barang`, `deskripsi`, `kategori_id`, `foto`, `created_at`, `updated_at`) VALUES
-(38, 'Meja Belajar', 'Meja belajar kelas', 1, '691d1f1710103.jpeg', '2025-11-19 01:36:23', '2025-11-19 01:36:23'),
-(39, 'Pena', 'Pena baru nich', 3, '691d1f324813a.png', '2025-11-19 01:36:50', '2025-11-19 01:36:50');
+INSERT INTO `barang` (`id`, `nama_barang`, `kategori_id`, `deskripsi`, `foto`, `jumlah_baik`, `jumlah_sedang`, `jumlah_rusak`, `created_at`, `updated_at`) VALUES
+(40, 'Meja Belajar', 1, 'meja belajar kelas', '691db17d14cce.jpeg', 100, 0, 0, '2025-11-19 10:40:06', '2025-11-19 12:01:01'),
+(41, 'Pena', 3, 'Pena belajar', '691db1551138a.png', 100, 0, 0, '2025-11-19 12:00:08', '2025-11-19 12:00:21');
 
 -- --------------------------------------------------------
 
@@ -139,7 +142,7 @@ CREATE TABLE `pengaturan` (
 INSERT INTO `pengaturan` (`id`, `nama_pengaturan`, `nilai`, `deskripsi`, `updated_at`) VALUES
 (1, 'nama_sekolah', 'SMA Negeri 1 Contoh', 'Nama sekolah', '2025-08-01 14:28:53'),
 (2, 'alamat_sekolah', 'Jl. Contoh No. 123, Kota Contoh', 'Alamat sekolah', '2025-08-01 14:28:53'),
-(3, 'telepon_sekolah', '021-12345677', 'Nomor telepon sekolah', '2025-08-02 06:33:09'),
+(3, 'telepon_sekolah', '021-12345678', 'Nomor telepon sekolah', '2025-11-20 09:09:56'),
 (4, 'email_sekolah', 'info@sman1contoh.sch.id', 'Email sekolah', '2025-08-01 14:28:53'),
 (5, 'maksimal_peminjaman', '10', 'Maksimal hari peminjaman', '2025-08-02 08:17:02'),
 (6, 'denda_terlambat', '1000', 'Denda per hari keterlambatan (Rp)', '2025-08-02 06:43:30');
@@ -152,9 +155,11 @@ INSERT INTO `pengaturan` (`id`, `nama_pengaturan`, `nilai`, `deskripsi`, `update
 
 CREATE TABLE `transaksi` (
   `id` int(11) NOT NULL,
-  `barang_id` int(11) DEFAULT NULL,
+  `kategori_id` int(11) DEFAULT NULL,
+  `nama_barang` varchar(200) NOT NULL,
   `deskripsi` longtext DEFAULT NULL,
-  `kondisi` enum('baik','rusak_ringan','rusak_berat') DEFAULT 'baik',
+  `bahan` varchar(255) DEFAULT NULL,
+  `asal` varchar(255) DEFAULT NULL,
   `jumlah` int(11) DEFAULT NULL,
   `harga_satuan` decimal(15,2) NOT NULL DEFAULT 0.00,
   `total` decimal(15,2) DEFAULT 0.00,
@@ -167,10 +172,11 @@ CREATE TABLE `transaksi` (
 -- Dumping data for table `transaksi`
 --
 
-INSERT INTO `transaksi` (`id`, `barang_id`, `deskripsi`, `kondisi`, `jumlah`, `harga_satuan`, `total`, `tahun_pengadaan`, `created_at`, `updated_at`) VALUES
-(1, 38, 'Meja belajar kelas 1', 'baik', 100, 3000.00, 300000.00, '2025', '2025-11-19 02:12:38', '2025-11-19 02:12:38'),
-(2, 39, 'Pena belajar', 'baik', 100, 4000.00, 400000.00, '2020', '2025-11-19 02:45:25', '2025-11-19 02:50:51'),
-(3, 38, 'Meja Guru', 'rusak_ringan', 10, 500000.00, 5000000.00, '2024', '2025-11-19 03:01:21', '2025-11-19 03:01:21');
+INSERT INTO `transaksi` (`id`, `kategori_id`, `nama_barang`, `deskripsi`, `bahan`, `asal`, `jumlah`, `harga_satuan`, `total`, `tahun_pengadaan`, `created_at`, `updated_at`) VALUES
+(4, 1, 'Meja Belajar', 'Meja belajar kelas nich', 'Abonit', 'BOS', 50, 1000000.00, 50000000.00, '2025', '2025-11-19 14:12:38', '2025-11-19 15:24:23'),
+(5, 3, 'Pena', 'Pena baru', 'Tinta', 'BOS', 50, 4000.00, 200000.00, '2025', '2025-11-19 15:24:11', '2025-11-19 15:24:11'),
+(6, 1, 'Meja Belajar', 'Meja belajar lagi', 'Abonit', 'BOS', 100, 1000000.00, 100000000.00, '2025', '2025-11-19 15:25:24', '2025-11-19 15:25:24'),
+(7, 4, 'Bola Basket', 'Bola basket untuk olahraga', 'Kulit', 'Hibah', 12, 150000.00, 1800000.00, '2022', '2025-11-19 16:07:41', '2025-11-19 16:07:41');
 
 -- --------------------------------------------------------
 
@@ -198,42 +204,6 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `username`, `password`, `nama_lengkap`, `email`, `role`, `status`, `foto`, `created_at`, `updated_at`) VALUES
 (3, 'kepsek', '$2y$10$5NQ6NqNrhQOnqKo2XbtS1uSDdQstQRa.kFq1oipD9fmIQ.MeBtL0a', 'Kepala Sekolah', 'kepsek@example.com', 'petugas', 'aktif', NULL, '2025-08-02 04:31:59', '2025-11-18 18:41:50'),
 (5, 'kesni', '$2y$10$.6rb/dFMfSaPRS.dGrAhe.TujZ9QPb0w198wieSMITt2Iwy4iTtJW', 'Kesni', 'kesni@example.com', 'admin', 'aktif', NULL, '2025-08-04 14:11:14', '2025-11-18 18:38:49');
-
--- --------------------------------------------------------
-
---
--- Stand-in structure for view `v_laporan_peminjaman`
--- (See below for the actual view)
---
-CREATE TABLE `v_laporan_peminjaman` (
-);
-
--- --------------------------------------------------------
-
---
--- Stand-in structure for view `v_stok_barang`
--- (See below for the actual view)
---
-CREATE TABLE `v_stok_barang` (
-);
-
--- --------------------------------------------------------
-
---
--- Structure for view `v_laporan_peminjaman`
---
-DROP TABLE IF EXISTS `v_laporan_peminjaman`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_laporan_peminjaman`  AS SELECT `p`.`id` AS `id`, `p`.`kode_peminjaman` AS `kode_peminjaman`, `b`.`kode_barang` AS `kode_barang`, `b`.`nama_barang` AS `nama_barang`, `p`.`peminjam_nama` AS `peminjam_nama`, `p`.`peminjam_kelas` AS `peminjam_kelas`, `p`.`peminjam_nis` AS `peminjam_nis`, `p`.`jumlah_pinjam` AS `jumlah_pinjam`, `p`.`tanggal_pinjam` AS `tanggal_pinjam`, `p`.`tanggal_kembali_rencana` AS `tanggal_kembali_rencana`, `p`.`tanggal_kembali_aktual` AS `tanggal_kembali_aktual`, `p`.`status` AS `status`, CASE WHEN `p`.`status` = 'dipinjam' AND curdate() > `p`.`tanggal_kembali_rencana` THEN 'terlambat' WHEN `p`.`status` = 'dikembalikan' THEN 'selesai' ELSE `p`.`status` END AS `status_detail`, to_days(coalesce(`p`.`tanggal_kembali_aktual`,curdate())) - to_days(`p`.`tanggal_pinjam`) AS `lama_peminjaman`, `u`.`nama_lengkap` AS `petugas` FROM ((`peminjaman` `p` join `barang` `b` on(`p`.`barang_id` = `b`.`id`)) join `users` `u` on(`p`.`created_by` = `u`.`id`)) ;
-
--- --------------------------------------------------------
-
---
--- Structure for view `v_stok_barang`
---
-DROP TABLE IF EXISTS `v_stok_barang`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_stok_barang`  AS SELECT `b`.`id` AS `id`, `b`.`kode_barang` AS `kode_barang`, `b`.`nama_barang` AS `nama_barang`, `k`.`nama_kategori` AS `nama_kategori`, `l`.`nama_lokasi` AS `nama_lokasi`, `b`.`jumlah_total` AS `jumlah_total`, `b`.`jumlah_tersedia` AS `jumlah_tersedia`, `b`.`jumlah_total`- `b`.`jumlah_tersedia` AS `jumlah_dipinjam`, `b`.`kondisi` AS `kondisi`, `b`.`tahun_pengadaan` AS `tahun_pengadaan`, `b`.`harga_perolehan` AS `harga_perolehan`, `b`.`created_at` AS `created_at` FROM ((`barang` `b` join `kategori` `k` on(`b`.`kategori_id` = `k`.`id`)) join `lokasi` `l` on(`b`.`lokasi_id` = `l`.`id`)) ;
 
 --
 -- Indexes for dumped tables
@@ -264,7 +234,7 @@ ALTER TABLE `pengaturan`
 --
 ALTER TABLE `transaksi`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_barang_id` (`barang_id`);
+  ADD KEY `idx_transaksi_kategori` (`kategori_id`);
 
 --
 -- Indexes for table `users`
@@ -282,7 +252,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `barang`
 --
 ALTER TABLE `barang`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `kategori`
@@ -300,7 +270,7 @@ ALTER TABLE `pengaturan`
 -- AUTO_INCREMENT for table `transaksi`
 --
 ALTER TABLE `transaksi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -322,7 +292,7 @@ ALTER TABLE `barang`
 -- Constraints for table `transaksi`
 --
 ALTER TABLE `transaksi`
-  ADD CONSTRAINT `fk_transaksi_barang` FOREIGN KEY (`barang_id`) REFERENCES `barang` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_transaksi_kategori` FOREIGN KEY (`kategori_id`) REFERENCES `kategori` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
